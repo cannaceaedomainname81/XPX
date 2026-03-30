@@ -64,8 +64,6 @@ public sealed partial class XPXLevelsPlugin
         }
     }
 
-    [ConsoleCommand("css_crate", "Open the XPX crate menu")]
-    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void OnCrateCommand(CCSPlayerController? player, CommandInfo command)
     {
         if (IsRealPlayer(player))
@@ -175,13 +173,37 @@ public sealed partial class XPXLevelsPlugin
         if (!_weaponStatsBySteamId.ContainsKey(steamId))
         {
             _weaponStatsBySteamId[steamId] = _repository.GetWeaponStats(steamId)
-                .ToDictionary(stat => NormalizeWeaponName(stat.WeaponName), StringComparer.OrdinalIgnoreCase);
+                .Select(stat => new
+                {
+                    Key = NormalizeWeaponName(stat.WeaponName),
+                    Stat = stat
+                })
+                .Where(entry => !string.IsNullOrWhiteSpace(entry.Key))
+                .GroupBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => new WeaponStatProgress
+                    {
+                        SteamId = steamId,
+                        WeaponName = group.Key,
+                        Kills = group.Sum(entry => entry.Stat.Kills),
+                        Headshots = group.Sum(entry => entry.Stat.Headshots)
+                    },
+                    StringComparer.OrdinalIgnoreCase);
         }
 
         if (!_missionStatesBySteamId.ContainsKey(steamId))
         {
             _missionStatesBySteamId[steamId] = _repository.GetMissionStates(steamId)
-                .ToDictionary(state => BuildMissionLookupKey(state.MissionKey, state.PeriodKey), StringComparer.OrdinalIgnoreCase);
+                .Where(state => !string.IsNullOrWhiteSpace(state.MissionKey) && !string.IsNullOrWhiteSpace(state.PeriodKey))
+                .GroupBy(state => BuildMissionLookupKey(state.MissionKey, state.PeriodKey), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .OrderByDescending(state => state.CompletedUtc ?? DateTimeOffset.MinValue)
+                        .ThenByDescending(state => state.Progress)
+                        .First(),
+                    StringComparer.OrdinalIgnoreCase);
         }
 
         if (!_achievementKeysBySteamId.ContainsKey(steamId))
@@ -865,7 +887,7 @@ public sealed partial class XPXLevelsPlugin
             }, disabled: !affordable);
         }
 
-        menu.AddMenuOption("Open crate menu", (target, _) => OpenCrateMenu(target));
+        menu.AddMenuOption("Crates", (target, _) => OpenCrateMenu(target));
         menu.AddMenuOption("Back to me", (target, _) => OpenMeMenu(target));
         OpenXPXMenu(player, menu);
     }

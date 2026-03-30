@@ -47,8 +47,8 @@ public sealed class XPXLevelsConfig : BasePluginConfig
     [JsonPropertyName("WelcomeMessages")] public List<string> WelcomeMessages { get; set; } =
     [
         "{Gold}Welcome back {White}{NAME}{Gold} to {White}{SERVER}{Gold}.",
-        "{LightBlue}Start with {White}!me {LightBlue}| {White}!help {LightBlue}| {White}!level {LightBlue}| {White}!rank {LightBlue}| {White}!top",
-        "{LightBlue}Progression: {White}!stats {LightBlue}| {White}!missions {LightBlue}| {White}!achievements {LightBlue}| {White}!shop {LightBlue}| {White}!crate {LightBlue}| {White}!wallet",
+        "{LightBlue}Start with {White}!me {LightBlue}| {White}!help {LightBlue}| {White}!commands {LightBlue}| {White}!level {LightBlue}| {White}!rank",
+        "{LightBlue}Progression: {White}!stats {LightBlue}| {White}!missions {LightBlue}| {White}!achievements {LightBlue}| {White}!shop {LightBlue}| {White}!wallet",
         "{LightBlue}More: {White}!rtv {LightBlue}| {White}!vote {LightBlue}| {White}!gamble <xp>",
         "{Yellow}You are level {White}{LEVEL}{Yellow} with {White}{TOTAL_XP}{Yellow} XP. Next unlock: {White}{NEXT_REWARD}{Yellow}."
     ];

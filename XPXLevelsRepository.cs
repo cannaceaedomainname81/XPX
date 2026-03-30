@@ -317,11 +317,18 @@ public sealed class XPXLevelsRepository
                 ORDER BY unlocked_utc ASC;
                 """,
                 new { SteamId = (long)steamId })
-            .Select(row => new PlayerAchievementState
+            .Where(row => !string.IsNullOrWhiteSpace(row.AchievementKey))
+            .Select(row =>
             {
-                SteamId = (ulong)row.SteamId,
-                AchievementKey = row.AchievementKey,
-                UnlockedUtc = DateTimeOffset.Parse(row.UnlockedUtc, null, DateTimeStyles.RoundtripKind)
+                var unlockedUtc = DateTimeOffset.TryParse(row.UnlockedUtc, null, DateTimeStyles.RoundtripKind, out var parsedUnlockedUtc)
+                    ? parsedUnlockedUtc
+                    : DateTimeOffset.UtcNow;
+                return new PlayerAchievementState
+                {
+                    SteamId = (ulong)row.SteamId,
+                    AchievementKey = row.AchievementKey,
+                    UnlockedUtc = unlockedUtc
+                };
             })
             .ToList();
     }

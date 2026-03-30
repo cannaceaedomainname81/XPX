@@ -9,6 +9,7 @@ public sealed class XPXNumberMenu : BaseMenu
 {
     private readonly BasePlugin _plugin;
 
+    public int ItemsPerPage { get; set; } = 6;
     public string TitleColor { get; set; } = "gold";
     public string EnabledColor { get; set; } = "white";
     public string DisabledColor { get; set; } = "gray";
@@ -41,10 +42,9 @@ public sealed class XPXNumberMenuInstance : BaseMenuInstance
 {
     private readonly BasePlugin _plugin;
 
-    public override int NumPerPage => 5;
+    public override int NumPerPage => Menu is XPXNumberMenu xpxMenu ? xpxMenu.ItemsPerPage : 6;
 
-    protected override int MenuItemsPerPage =>
-        (Menu.ExitButton ? 0 : 1) + ((HasPrevButton && HasNextButton) ? NumPerPage - 1 : NumPerPage);
+    protected override int MenuItemsPerPage => NumPerPage;
 
     public XPXNumberMenuInstance(BasePlugin plugin, CCSPlayerController player, IMenu menu) : base(player, menu)
     {

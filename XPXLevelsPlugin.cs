@@ -92,7 +92,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     private string? _transitionSnapshotPath;
 
     public override string ModuleName => "XPX Levels";
-    public override string ModuleVersion => "1.4.1";
+    public override string ModuleVersion => "1.4.2";
     public override string ModuleAuthor => "OpenAI";
     public override string ModuleDescription => "Levels, XP rewards, RTV, and admin tools for XPX CS2.";
 
@@ -452,7 +452,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             return;
         }
 
-        ToggleHelpPanel(player!);
+        OpenHelpMenu(player!);
     }
 
     [ConsoleCommand("css_me", "Open your XPX quick menu")]
@@ -465,6 +465,18 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         }
 
         OpenMeMenu(player!);
+    }
+
+    [ConsoleCommand("css_commands", "Show the XPX command reference")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnCommandsCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (!IsRealPlayer(player))
+        {
+            return;
+        }
+
+        OpenCommandsMenu(player!);
     }
 
     [ConsoleCommand("css_gamble", "Gamble a chunk of your XP")]
@@ -587,6 +599,22 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     public void OnRemoveXpCommand(CCSPlayerController? caller, CommandInfo command)
     {
         HandleAdminXpCommand(caller, command, false);
+    }
+
+    [ConsoleCommand("css_givecredits", "Give credits to a player or target group")]
+    [RequiresPermissions(PermissionXp)]
+    [CommandHelper(minArgs: 2, usage: "[target] [amount]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+    public void OnGiveCreditsCommand(CCSPlayerController? caller, CommandInfo command)
+    {
+        HandleAdminCreditsCommand(caller, command, true);
+    }
+
+    [ConsoleCommand("css_removecredits", "Remove credits from a player or target group")]
+    [RequiresPermissions(PermissionXp)]
+    [CommandHelper(minArgs: 2, usage: "[target] [amount]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+    public void OnRemoveCreditsCommand(CCSPlayerController? caller, CommandInfo command)
+    {
+        HandleAdminCreditsCommand(caller, command, false);
     }
 
     [ConsoleCommand("css_changemap", "Change to a specific map")]
@@ -762,18 +790,15 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
                 Reply(joinedPlayer, ExpandTokens(joinedPlayer, progress, message));
             }
 
-            if (TryGetSteamId(joinedPlayer, out var steamId))
+            AddTimer(1.2f, () =>
             {
-                AddTimer(1.2f, () =>
+                if (!IsRealPlayer(joinedPlayer) || MenuManager.GetActiveMenu(joinedPlayer) is not null)
                 {
-                    if (!IsRealPlayer(joinedPlayer) || _openHelpPanels.Contains(steamId) || MenuManager.GetActiveMenu(joinedPlayer) is not null)
-                    {
-                        return;
-                    }
+                    return;
+                }
 
-                    ShowHelpPanel(joinedPlayer, steamId, closeActiveMenu: false);
-                }, TimerFlags.STOP_ON_MAPCHANGE);
-            }
+                OpenHelpMenu(joinedPlayer, autoOpened: true);
+            }, TimerFlags.STOP_ON_MAPCHANGE);
         }, TimerFlags.STOP_ON_MAPCHANGE);
     }
 
@@ -1017,6 +1042,42 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             (add ? "{Green} XP for matched targets." : "{Red} XP for matched targets."));
     }
 
+    private void HandleAdminCreditsCommand(CCSPlayerController? caller, CommandInfo command, bool add)
+    {
+        if (!int.TryParse(command.GetArg(2), out var amount) || amount <= 0)
+        {
+            Reply(command, "{Red}Credit amount must be a positive number.");
+            return;
+        }
+
+        var delta = add ? amount : -amount;
+        var targets = command.GetArgTargetResult(1).Players.Where(IsRealPlayer).ToList();
+        if (targets.Count == 0)
+        {
+            Reply(command, "{Red}No valid targets matched.");
+            return;
+        }
+
+        foreach (var target in targets)
+        {
+            if (caller is not null && !AdminManager.CanPlayerTarget(caller, target))
+            {
+                continue;
+            }
+
+            AdjustCredits(target, delta, add ? "admin grant" : "admin removal", false);
+            Reply(target,
+                add
+                    ? "{Green}An admin granted you {White}" + amount.ToString("N0", CultureInfo.InvariantCulture) + "{Green} " + Config.CurrencyName + "."
+                    : "{Red}An admin removed {White}" + amount.ToString("N0", CultureInfo.InvariantCulture) + "{Red} " + Config.CurrencyName + ".");
+        }
+
+        Reply(command,
+            (add ? "{Green}Granted {White}" : "{Red}Removed {White}") +
+            amount.ToString("N0", CultureInfo.InvariantCulture) +
+            (add ? "{Green} " : "{Red} ") + Config.CurrencyName + "{Default} for matched targets.");
+    }
+
     private void OpenAdminMenu(CCSPlayerController player)
     {
         var menu = CreateMenu("XPX Admin");
@@ -1041,6 +1102,8 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         {
             menu.AddMenuOption("Give XP", (admin, _) => OpenXpAmountMenu(admin, true));
             menu.AddMenuOption("Remove XP", (admin, _) => OpenXpAmountMenu(admin, false));
+            menu.AddMenuOption("Give credits", (admin, _) => OpenCreditsAmountMenu(admin, true));
+            menu.AddMenuOption("Remove credits", (admin, _) => OpenCreditsAmountMenu(admin, false));
         }
 
         if (HasPermission(player, PermissionVote))
@@ -1075,7 +1138,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         menu.AddMenuOption("Missions", (_, _) => OpenMissionsMenu(player));
         menu.AddMenuOption("Achievements", (_, _) => OpenAchievementsMenu(player));
         menu.AddMenuOption("Shop", (_, _) => OpenShopMenu(player));
-        menu.AddMenuOption("Crates / wallet", (_, _) => OpenCrateMenu(player));
+        menu.AddMenuOption("Wallet", (_, _) => OpenWalletMenu(player));
         menu.AddMenuOption(_activeMapVote is null ? "Rock the vote" : "Vote for next map", (_, _) =>
         {
             if (_activeMapVote is null)
@@ -1087,7 +1150,8 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
                 OpenMapVoteMenu(player);
             }
         });
-        menu.AddMenuOption("XPX help", (_, _) => ToggleHelpPanel(player));
+        menu.AddMenuOption("XPX help", (_, _) => OpenHelpMenu(player));
+        menu.AddMenuOption("Commands", (_, _) => OpenCommandsMenu(player));
 
         if (HasPermission(player, PermissionMenu))
         {
@@ -1111,6 +1175,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
+        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1134,6 +1199,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
+        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1148,6 +1214,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             menu.AddMenuOption("Disable forced loadout", (admin, _) => DisableForcedLoadoutMode(admin.PlayerName, actor: admin));
         }
 
+        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1163,6 +1230,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
+        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1178,6 +1246,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
+        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1203,6 +1272,49 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
+        menu.AddMenuOption(add ? "Back to Give XP" : "Back to Remove XP", (target, _) => OpenXpAmountMenu(target, add));
+        OpenXPXMenu(player, menu);
+    }
+
+    private void OpenCreditsAmountMenu(CCSPlayerController player, bool add)
+    {
+        var menu = CreateMenu(add ? "Give Credits" : "Remove Credits");
+        foreach (var amount in Config.AdminXpAmounts)
+        {
+            var selectedAmount = amount;
+            menu.AddMenuOption(selectedAmount.ToString("N0", CultureInfo.InvariantCulture), (_, _) =>
+            {
+                OpenCreditsTargetMenu(player, add, selectedAmount);
+            });
+        }
+
+        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
+        OpenXPXMenu(player, menu);
+    }
+
+    private void OpenCreditsTargetMenu(CCSPlayerController player, bool add, int amount)
+    {
+        var menu = CreateMenu(add ? $"Give {amount:N0} Credits" : $"Remove {amount:N0} Credits");
+        foreach (var target in GetHumanPlayers().Where(target => AdminManager.CanPlayerTarget(player, target)))
+        {
+            var selectedTarget = target;
+            menu.AddMenuOption(selectedTarget.PlayerName, (_, _) =>
+            {
+                AdjustCredits(selectedTarget, add ? amount : -amount, add ? "admin grant" : "admin removal", false);
+                Reply(selectedTarget,
+                    add
+                        ? "{Green}You received {White}" + amount.ToString("N0", CultureInfo.InvariantCulture) + "{Green} " + Config.CurrencyName + " from an admin."
+                        : "{Red}An admin removed {White}" + amount.ToString("N0", CultureInfo.InvariantCulture) + "{Red} " + Config.CurrencyName + ".");
+                Reply(player,
+                    (add ? "{Green}Granted {White}" : "{Red}Removed {White}") +
+                    amount.ToString("N0", CultureInfo.InvariantCulture) +
+                    "{Default} " + Config.CurrencyName + " " +
+                    (add ? "to {White}" : "from {White}") +
+                    selectedTarget.PlayerName + "{Default}.");
+            });
+        }
+
+        menu.AddMenuOption(add ? "Back to Give Credits" : "Back to Remove Credits", (target, _) => OpenCreditsAmountMenu(target, add));
         OpenXPXMenu(player, menu);
     }
 
@@ -2379,27 +2491,112 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
 
     private void ToggleHelpPanel(CCSPlayerController player)
     {
-        if (!TryGetSteamId(player, out var steamId))
+        OpenHelpMenu(player);
+    }
+
+    private void OpenHelpMenu(CCSPlayerController player, bool autoOpened = false)
+    {
+        var progress = EnsurePlayerProgress(player);
+        var state = progress is null ? _levelCurve.GetState(0) : _levelCurve.GetState(progress.TotalXp);
+        var mode = GetCurrentXpModeLabel();
+        var menu = CreateMenu(autoOpened
+            ? $"Welcome | {RenderShortLevelLabel(state.Level)} | {mode}"
+            : $"XPX Help | {RenderShortLevelLabel(state.Level)} | {mode}");
+
+        menu.AddMenuOption("Getting started", (_, _) => OpenHelpGettingStartedMenu(player));
+        menu.AddMenuOption("Commands", (_, _) => OpenCommandsMenu(player));
+        menu.AddMenuOption("Progression & rewards", (_, _) => OpenHelpProgressionMenu(player));
+        menu.AddMenuOption("Economy & shop", (_, _) => OpenHelpEconomyMenu(player));
+        menu.AddMenuOption("Voting & menus", (_, _) => OpenHelpMenusMenu(player));
+        if (!autoOpened)
         {
-            return;
+            menu.AddMenuOption("Back to me", (target, _) => OpenMeMenu(target));
         }
 
-        var now = DateTimeOffset.UtcNow;
-        if (_lastHelpToggleAt.TryGetValue(steamId, out var lastToggleAt) &&
-            (now - lastToggleAt).TotalMilliseconds < 350d)
+        OpenXPXMenu(player, menu);
+    }
+
+    private void OpenHelpGettingStartedMenu(CCSPlayerController player)
+    {
+        var progress = EnsurePlayerProgress(player);
+        var state = progress is null ? _levelCurve.GetState(0) : _levelCurve.GetState(progress.TotalXp);
+        var lines = new[]
         {
-            return;
-        }
+            $"Current mode: {GetCurrentXpModeLabel()}",
+            $"Current level: {state.Level}/{Config.MaxLevel}",
+            $"Current tag: {GetCurrentVisibleTag(progress)}",
+            "Earn XP by kills, wins, and objectives.",
+            "Earn Credits from bonuses, missions, and achievements.",
+            "Warmup gives no XP, so progression starts after warmup."
+        };
 
-        _lastHelpToggleAt[steamId] = now;
+        OpenReadOnlyMenu(player, "Help | Getting Started", lines, "Back to help", target => OpenHelpMenu(target));
+    }
 
-        if (_openHelpPanels.Contains(steamId))
+    private void OpenCommandsMenu(CCSPlayerController player)
+    {
+        var lines = new[]
         {
-            CloseHelpPanel(player);
-            return;
-        }
+            "Core: !me !help !commands",
+            "Progress: !level !rank !top !stats",
+            "Goals: !missions !achievements",
+            "Economy: !shop !wallet !gamble <xp>",
+            "Maps: !rtv !vote",
+            "Menus: !bindmenu or !1-!9 while a menu is open"
+        };
 
-        ShowHelpPanel(player, steamId);
+        OpenReadOnlyMenu(player, "Commands", lines, "Back to help", target => OpenHelpMenu(target));
+    }
+
+    private void OpenHelpProgressionMenu(CCSPlayerController player)
+    {
+        var progress = EnsurePlayerProgress(player);
+        var state = progress is null ? _levelCurve.GetState(0) : _levelCurve.GetState(progress.TotalXp);
+        var nextReward = progress is null ? null : GetNextReward(state.Level);
+        var lines = new[]
+        {
+            $"Level cap: {Config.MaxLevel}",
+            $"You are {RenderShortLevelLabel(state.Level)} with tag {GetCurrentVisibleTag(progress)}",
+            "Daily and weekly missions grant XP and Credits.",
+            "Achievements unlock permanent badges and Credits.",
+            "Tags and knives unlock at milestone levels.",
+            "Next reward: " + (nextReward is null ? "All rewards unlocked" : DescribeReward(nextReward))
+        };
+
+        OpenReadOnlyMenu(player, "Help | Progression", lines, "Back to help", target => OpenHelpMenu(target));
+    }
+
+    private void OpenHelpEconomyMenu(CCSPlayerController player)
+    {
+        var progress = EnsurePlayerProgress(player);
+        var credits = progress?.Credits ?? 0;
+        var tokens = progress?.CrateTokens ?? 0;
+        var lines = new[]
+        {
+            $"Current {Config.CurrencyName}: {credits}",
+            $"Crate tokens: {tokens}",
+            "Use !shop to buy XP, credits, and crate tokens.",
+            "Open crates from inside the shop flow.",
+            "Bonuses, missions, and achievements feed your economy.",
+            "Use !wallet to see your balance and totals."
+        };
+
+        OpenReadOnlyMenu(player, "Help | Economy", lines, "Back to help", target => OpenHelpMenu(target));
+    }
+
+    private void OpenHelpMenusMenu(CCSPlayerController player)
+    {
+        var lines = new[]
+        {
+            "Use 1-6 to select menu items on the page.",
+            "Use 7 for previous page when available.",
+            "Use 8 for next page when available.",
+            "Use 9 to close any XPX menu.",
+            "Use !bindmenu for local 1-9 binds.",
+            "If you do not bind keys, !1-!9 in chat still works."
+        };
+
+        OpenReadOnlyMenu(player, "Help | Menus", lines, "Back to help", target => OpenHelpMenu(target));
     }
 
     private void ShowHelpPanel(CCSPlayerController player, ulong steamId, bool closeActiveMenu = true)
@@ -2485,9 +2682,9 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             $"<font color='white'>Your tag:</font> <font color='gold'>{tag}</font>",
             "<font color='white'>How to play:</font> <font color='gold'>Get kills, win rounds, do objectives, and finish missions to earn XP and credits.</font>",
             "<font color='white'>Warmup:</font> <font color='gold'>No XP is awarded during warmup.</font>",
-            "<font color='white'>Start here:</font> <font color='gold'>!me !help !level !rank !top !stats</font>",
+            "<font color='white'>Start here:</font> <font color='gold'>!me !help !commands !level !rank !top !stats</font>",
             "<font color='white'>Goals:</font> <font color='gold'>!missions !achievements</font>",
-            $"<font color='white'>Economy:</font> <font color='gold'>Earn {Config.CurrencyName} from missions, achievements, streaks, and bonuses, then spend them in !shop or !crate.</font>",
+            $"<font color='white'>Economy:</font> <font color='gold'>Earn {Config.CurrencyName} from missions, achievements, streaks, and bonuses, then spend them in !shop.</font>",
             "<font color='white'>Other commands:</font> <font color='gold'>!wallet !rtv !vote !gamble &lt;xp&gt;</font>",
             "<font color='white'>Progression:</font> <font color='gold'>Level to 500 and unlock permanent tags plus knife rewards.</font>",
             $"<font color='white'>Next reward:</font> <font color='gold'>{nextRewardText}</font>",
@@ -2511,6 +2708,11 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
 
     private void OpenReadOnlyMenu(CCSPlayerController player, string title, IEnumerable<string> lines)
     {
+        OpenReadOnlyMenu(player, title, lines, "Back to me", OpenMeMenu);
+    }
+
+    private void OpenReadOnlyMenu(CCSPlayerController player, string title, IEnumerable<string> lines, string backLabel, Action<CCSPlayerController> backAction)
+    {
         var menu = CreateMenu(title);
         menu.PostSelectAction = PostSelectAction.Close;
 
@@ -2519,7 +2721,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             menu.AddMenuOption(line, static (_, _) => { }, disabled: true);
         }
 
-        menu.AddMenuOption("Back to me", (target, _) => OpenMeMenu(target));
+        menu.AddMenuOption(backLabel, (target, _) => backAction(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -2924,6 +3126,8 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     {
         return new XPXNumberMenu(title, this)
         {
+            ExitButton = true,
+            ItemsPerPage = 6,
             TitleColor = "gold",
             EnabledColor = "white",
             DisabledColor = "gray",

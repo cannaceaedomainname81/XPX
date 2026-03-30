@@ -505,7 +505,7 @@ public sealed partial class XPXLevelsPlugin
     {
         if (xp > 0)
         {
-            AdjustXp(player, xp, label, false);
+            AdjustXp(player, xp, label, false, applyXpBoost: true);
         }
 
         if (credits > 0)
@@ -588,7 +588,7 @@ public sealed partial class XPXLevelsPlugin
     {
         if (mission.RewardXp > 0)
         {
-            AdjustXp(player, mission.RewardXp, mission.Title, false);
+            AdjustXp(player, mission.RewardXp, mission.Title, false, applyXpBoost: true);
         }
 
         if (mission.RewardCredits > 0)
@@ -825,7 +825,8 @@ public sealed partial class XPXLevelsPlugin
                 $"Best streak: {stats.BestKillStreak} | Multikills: {stats.MultiKills}",
                 $"Favorite weapon: {favoriteWeapon}",
                 $"Playtime: {playtime}",
-                $"{Config.CurrencyName}: {progress.Credits} | Crates: {progress.CrateTokens}"
+                $"{Config.CurrencyName}: {progress.Credits} | Crates: {progress.CrateTokens}",
+                $"Active XP boost: {GetActiveXpBoostLabel(progress)}"
             });
     }
 
@@ -893,7 +894,8 @@ public sealed partial class XPXLevelsPlugin
                 $"Crate tokens: {progress.CrateTokens}",
                 $"Crates opened: {stats.CratesOpened}",
                 $"Missions completed: {stats.MissionsCompleted}",
-                $"Achievements unlocked: {stats.AchievementsUnlocked}"
+                $"Achievements unlocked: {stats.AchievementsUnlocked}",
+                $"Active XP boost: {GetActiveXpBoostLabel(progress)}"
             });
     }
 
@@ -906,17 +908,20 @@ public sealed partial class XPXLevelsPlugin
         }
 
         var menu = CreateMenu($"Shop | {progress.Credits} {Config.CurrencyName}");
-        foreach (var item in Config.ShopItems)
+        menu.BodyLines.Add($"{Config.CurrencyName}: {progress.Credits} | Tokens: {progress.CrateTokens}");
+        menu.BodyLines.Add($"Active XP boost: {GetActiveXpBoostLabel(progress)}");
+
+        foreach (var item in Config.ShopItems.Where(static item => item.RewardType != ShopRewardType.CrateToken))
         {
             var selectedItem = item;
             var affordable = progress.Credits >= item.CostCredits;
-            menu.AddMenuOption($"{selectedItem.Name} ({selectedItem.CostCredits} {Config.CurrencyName})", (_, _) =>
+            menu.AddMenuOption($"{selectedItem.Name} | {selectedItem.CostCredits} {Config.CurrencyName}", (_, _) =>
             {
                 PurchaseShopItem(player, selectedItem);
             }, disabled: !affordable);
         }
 
-        menu.AddMenuOption("Crates", (target, _) => OpenCrateMenu(target));
+        menu.AddMenuOption("Cases & tokens", (target, _) => OpenCrateMenu(target));
         menu.AddMenuOption("Back to me", (target, _) => OpenMeMenu(target));
         OpenXPXMenu(player, menu);
     }
@@ -960,12 +965,16 @@ public sealed partial class XPXLevelsPlugin
             return;
         }
 
-        var menu = CreateMenu($"Crates | {progress.CrateTokens} tokens");
+        var menu = CreateMenu($"Cases | {progress.CrateTokens} tokens");
+        menu.BodyLines.Add(crate.Description);
+        menu.BodyLines.Add($"{Config.CurrencyName}: {progress.Credits} | Tokens: {progress.CrateTokens}");
+        menu.BodyLines.Add($"Active XP boost: {GetActiveXpBoostLabel(progress)}");
         menu.AddMenuOption($"Open {crate.Name}", (_, _) => OpenCrate(player), disabled: progress.CrateTokens <= 0);
         menu.AddMenuOption($"Buy token ({crate.CostCredits} {Config.CurrencyName})", (_, _) =>
         {
             PurchaseCrateToken(player, crate);
         }, disabled: progress.Credits < crate.CostCredits);
+        menu.AddMenuOption("View drop table", (target, _) => OpenCrateDropTableMenu(target, crate));
         menu.AddMenuOption("Back to shop", (target, _) => OpenShopMenu(target));
         menu.AddMenuOption("Back to me", (target, _) => OpenMeMenu(target));
         OpenXPXMenu(player, menu);
@@ -987,8 +996,8 @@ public sealed partial class XPXLevelsPlugin
         }
 
         AdjustCredits(player, -item.CostCredits, item.Name, false);
-        ApplyShopReward(player, item.Name, item.RewardType, item.RewardAmount);
-        Reply(player, "{Green}Purchased {White}" + item.Name + "{Green}.");
+        var rewardSummary = ApplyShopReward(player, item.Name, item.RewardType, item.RewardAmount);
+        Reply(player, "{Green}Purchased {White}" + item.Name + "{Green}. Reward: {White}" + rewardSummary + "{Green}.");
         OpenShopMenu(player);
     }
 
@@ -1034,7 +1043,7 @@ public sealed partial class XPXLevelsPlugin
         var reward = RollCrateReward(crate);
         progress.CrateTokens--;
         _repository?.SavePlayer(progress);
-        ApplyShopReward(player, reward.Label, reward.RewardType, reward.RewardAmount);
+        var rewardSummary = ApplyShopReward(player, reward.Label, reward.RewardType, reward.RewardAmount, reward.DurationMinutes);
 
         stats.CratesOpened++;
         UpdateMissionProgress(player, MissionObjective.CratesOpened, 1);
@@ -1043,28 +1052,20 @@ public sealed partial class XPXLevelsPlugin
             SaveFeatureState(steamId);
         }
 
-        OpenReadOnlyMenu(player,
-            "Crate Opened",
-            new[]
-            {
-                $"Case: {crate.Name}",
-                $"Reward: {reward.Label}",
-                $"Remaining tokens: {progress.CrateTokens}"
-            });
+        var refreshedProgress = EnsurePlayerProgress(player);
+        OpenCrateResultMenu(player, crate, reward, rewardSummary, refreshedProgress ?? progress);
     }
 
-    private void ApplyShopReward(CCSPlayerController player, string label, ShopRewardType rewardType, int rewardAmount)
+    private string ApplyShopReward(CCSPlayerController player, string label, ShopRewardType rewardType, int rewardAmount, int durationMinutes = 0)
     {
         switch (rewardType)
         {
             case ShopRewardType.Xp:
                 AdjustXp(player, rewardAmount, label, false);
-                Reply(player, "{Green}Reward: {White}" + rewardAmount + "{Green} XP.");
-                break;
+                return rewardAmount + " XP";
             case ShopRewardType.Credits:
                 AdjustCredits(player, rewardAmount, label, false);
-                Reply(player, "{Green}Reward: {White}" + rewardAmount + "{Green} " + Config.CurrencyName + ".");
-                break;
+                return rewardAmount + " " + Config.CurrencyName;
             case ShopRewardType.CrateToken:
             {
                 var progress = EnsurePlayerProgress(player);
@@ -1072,12 +1073,16 @@ public sealed partial class XPXLevelsPlugin
                 {
                     progress.CrateTokens += rewardAmount;
                     _repository?.SavePlayer(progress);
-                    Reply(player, "{Green}Reward: {White}" + rewardAmount + "{Green} crate token(s).");
+                    return rewardAmount + " crate token(s)";
                 }
 
-                break;
+                return rewardAmount + " crate token(s)";
             }
+            case ShopRewardType.XpBoost:
+                return GrantXpBoost(player, rewardAmount, durationMinutes <= 0 ? 10 : durationMinutes);
         }
+
+        return label;
     }
 
     private CrateRewardDefinition RollCrateReward(CrateDefinition crate)
@@ -1095,6 +1100,84 @@ public sealed partial class XPXLevelsPlugin
         }
 
         return crate.Rewards.Last();
+    }
+
+    private void OpenCrateDropTableMenu(CCSPlayerController player, CrateDefinition crate)
+    {
+        var totalWeight = Math.Max(1, crate.Rewards.Sum(reward => Math.Max(1, reward.Weight)));
+        var lines = crate.Rewards
+            .OrderByDescending(GetCrateRarityRank)
+            .ThenByDescending(reward => reward.Weight)
+            .Select(reward =>
+            {
+                var chance = reward.Weight * 100d / totalWeight;
+                return $"[{reward.Rarity}] {reward.Label} | {chance:0.0}%";
+            })
+            .ToList();
+
+        OpenReadOnlyMenu(player, $"{crate.Name} Drops", lines, "Back to cases", target => OpenCrateMenu(target));
+    }
+
+    private void OpenCrateResultMenu(CCSPlayerController player, CrateDefinition crate, CrateRewardDefinition reward, string rewardSummary, PlayerProgress progress)
+    {
+        var menu = CreateMenu($"{reward.Rarity} Reward");
+        menu.TitleColor = GetCrateRarityColor(reward.Rarity);
+        menu.BodyColor = "white";
+        menu.BodyLines.Add($"Case: {crate.Name}");
+        menu.BodyLines.Add($"Drop: {reward.Label}");
+        menu.BodyLines.Add($"Effect: {rewardSummary}");
+        menu.BodyLines.Add($"Remaining tokens: {progress.CrateTokens}");
+
+        if (progress.CrateTokens > 0)
+        {
+            menu.AddMenuOption($"Open {crate.Name} again", (_, _) => OpenCrate(player));
+        }
+
+        menu.AddMenuOption("Back to cases", (target, _) => OpenCrateMenu(target));
+        menu.AddMenuOption("Back to shop", (target, _) => OpenShopMenu(target));
+        OpenXPXMenu(player, menu);
+    }
+
+    private string GrantXpBoost(CCSPlayerController player, int percent, int durationMinutes)
+    {
+        var progress = EnsurePlayerProgress(player);
+        if (progress is null)
+        {
+            return $"+{percent}% XP for {durationMinutes}m";
+        }
+
+        NormalizeActiveBoosts(progress, persistChanges: true);
+        var now = DateTimeOffset.UtcNow;
+        var anchor = progress.XpBoostExpiresUtc is not null && progress.XpBoostExpiresUtc > now
+            ? progress.XpBoostExpiresUtc.Value
+            : now;
+
+        progress.XpBoostPercent = Math.Max(progress.XpBoostPercent, percent);
+        progress.XpBoostExpiresUtc = anchor.AddMinutes(Math.Max(1, durationMinutes));
+        _repository?.SavePlayer(progress);
+        return GetActiveXpBoostLabel(progress);
+    }
+
+    private static int GetCrateRarityRank(CrateRewardDefinition reward)
+    {
+        return reward.Rarity switch
+        {
+            "Legendary" => 4,
+            "Epic" => 3,
+            "Rare" => 2,
+            _ => 1
+        };
+    }
+
+    private static string GetCrateRarityColor(string rarity)
+    {
+        return rarity switch
+        {
+            "Legendary" => "orange",
+            "Epic" => "violet",
+            "Rare" => "deepskyblue",
+            _ => "silver"
+        };
     }
 
     private string GetFavoriteWeapon(ulong steamId)

@@ -187,6 +187,26 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             .ToList();
         config.Crates = config.Crates
             .Where(crate => !string.IsNullOrWhiteSpace(crate.Key) && crate.Rewards.Count > 0)
+            .Select(crate => new CrateDefinition
+            {
+                Key = crate.Key.Trim(),
+                Name = string.IsNullOrWhiteSpace(crate.Name) ? "XPX Case" : crate.Name.Trim(),
+                Description = string.IsNullOrWhiteSpace(crate.Description) ? "Weighted XPX reward crate." : crate.Description.Trim(),
+                CostCredits = Math.Max(0, crate.CostCredits),
+                Rewards = crate.Rewards
+                    .Where(reward => !string.IsNullOrWhiteSpace(reward.Label))
+                    .Select(reward => new CrateRewardDefinition
+                    {
+                        Label = reward.Label.Trim(),
+                        Rarity = NormalizeCrateRarity(reward.Rarity),
+                        RewardType = reward.RewardType,
+                        RewardAmount = Math.Max(0, reward.RewardAmount),
+                        DurationMinutes = Math.Max(0, reward.DurationMinutes),
+                        Weight = Math.Max(1, reward.Weight)
+                    })
+                    .ToList()
+            })
+            .Where(crate => crate.Rewards.Count > 0)
             .ToList();
 
         Config = config;
@@ -317,7 +337,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         var deadPlayer = victim!;
         if (IsChickenTarget(deadPlayer))
         {
-            AdjustXp(killer, Config.ChickenKillXp, "killing a chicken", true);
+            AdjustXp(killer, Config.ChickenKillXp, "killing a chicken", true, applyXpBoost: true);
             return HookResult.Continue;
         }
 
@@ -333,7 +353,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             return HookResult.Continue;
         }
 
-        AdjustXp(killer, xpToAward, reason, Config.ShowKillXpMessages);
+        AdjustXp(killer, xpToAward, reason, Config.ShowKillXpMessages, applyXpBoost: true);
         HandleKillFeatureProgress(killer, deadPlayer, @event.Weapon, @event.Headshot, knifeKill);
         if (IsRealPlayer(@event.Assister) && @event.Assister != attacker && @event.Assister != victim)
         {
@@ -350,7 +370,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             return HookResult.Continue;
         }
 
-        AdjustXp(@event.Userid!, Config.BombPlantXp, "bomb plant", true);
+        AdjustXp(@event.Userid!, Config.BombPlantXp, "bomb plant", true, applyXpBoost: true);
         HandleBombFeatureProgress(@event.Userid!, MissionObjective.BombPlants);
         return HookResult.Continue;
     }
@@ -363,7 +383,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             return HookResult.Continue;
         }
 
-        AdjustXp(@event.Userid!, Config.BombDefuseXp, "bomb defuse", true);
+        AdjustXp(@event.Userid!, Config.BombDefuseXp, "bomb defuse", true, applyXpBoost: true);
         HandleBombFeatureProgress(@event.Userid!, MissionObjective.BombDefuses);
         return HookResult.Continue;
     }
@@ -384,7 +404,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         var winningTeam = (CsTeam)@event.Winner;
         foreach (var player in GetHumanPlayers().Where(player => player.Team == winningTeam))
         {
-            AdjustXp(player, Config.RoundWinXp, "round win", true);
+            AdjustXp(player, Config.RoundWinXp, "round win", true, applyXpBoost: true);
         }
 
         HandleRoundWinFeatureProgress(winningTeam);
@@ -860,6 +880,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         }
 
         progress.PlayerName = NormalizeStoredPlayerName(progress.PlayerName);
+        NormalizeActiveBoosts(progress);
         var storedProgress = _repository.GetPlayer(progress.SteamId);
         if (storedProgress is null)
         {
@@ -867,13 +888,18 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             return;
         }
 
+        NormalizeActiveBoosts(storedProgress);
+
         if (progress.TotalXp > storedProgress.TotalXp)
         {
             _repository.SavePlayer(progress);
             return;
         }
 
-        if (progress.Credits != storedProgress.Credits || progress.CrateTokens != storedProgress.CrateTokens)
+        if (progress.Credits != storedProgress.Credits ||
+            progress.CrateTokens != storedProgress.CrateTokens ||
+            progress.XpBoostPercent != storedProgress.XpBoostPercent ||
+            progress.XpBoostExpiresUtc != storedProgress.XpBoostExpiresUtc)
         {
             _repository.SavePlayer(progress);
             return;
@@ -1984,7 +2010,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         }
     }
 
-    private bool AdjustXp(CCSPlayerController player, long delta, string reason, bool showDeltaMessage)
+    private bool AdjustXp(CCSPlayerController player, long delta, string reason, bool showDeltaMessage, bool applyXpBoost = false)
     {
         var progress = EnsurePlayerProgress(player);
         if (progress is null || delta == 0 || _repository is null)
@@ -1992,8 +2018,11 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             return false;
         }
 
+        NormalizeActiveBoosts(progress, persistChanges: true);
         var oldState = _levelCurve.GetState(progress.TotalXp);
-        var newTotalXp = Math.Clamp(progress.TotalXp + delta, 0, _levelCurve.MaxTotalXp);
+        var requestedDelta = delta;
+        var boostedDelta = applyXpBoost && delta > 0 ? CalculateXpBoostBonus(progress, delta) : 0;
+        var newTotalXp = Math.Clamp(progress.TotalXp + delta + boostedDelta, 0, _levelCurve.MaxTotalXp);
         var actualDelta = newTotalXp - progress.TotalXp;
         if (actualDelta == 0)
         {
@@ -2010,8 +2039,12 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         {
             var verb = actualDelta > 0 ? "gained" : "lost";
             var amount = Math.Abs(actualDelta).ToString("N0", CultureInfo.InvariantCulture);
+            var appliedBoost = requestedDelta > 0 && actualDelta > 0
+                ? Math.Max(0, actualDelta - Math.Min(requestedDelta, actualDelta))
+                : 0;
             Reply(player,
                 (actualDelta > 0 ? "{Green}" : "{Red}") + "You " + verb + " {White}" + amount + "{Default} XP for " + reason +
+                (appliedBoost > 0 ? " {Silver}(+" + appliedBoost.ToString("N0", CultureInfo.InvariantCulture) + " boost)" : string.Empty) +
                 ". {Silver}" + RenderShortLevelLabel(newState.Level) + " | " + RenderProgressPercent(newState));
         }
 
@@ -2177,15 +2210,19 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         };
         loadedProgress.PlayerName = cleanName;
         loadedProgress.TotalXp = resolvedXp;
+        NormalizeActiveBoosts(loadedProgress);
 
         if (_players.TryGetValue(steamId, out var progress))
         {
             progress.PlayerName = cleanName;
+            NormalizeActiveBoosts(progress, persistChanges: true);
             if (reloadFromRepository)
             {
                 progress.TotalXp = loadedProgress.TotalXp;
                 progress.Credits = loadedProgress.Credits;
                 progress.CrateTokens = loadedProgress.CrateTokens;
+                progress.XpBoostPercent = loadedProgress.XpBoostPercent;
+                progress.XpBoostExpiresUtc = loadedProgress.XpBoostExpiresUtc;
             }
         }
         else
@@ -2570,8 +2607,9 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             $"Current {Config.CurrencyName}: {credits}",
             $"Crate tokens: {tokens}",
             "Use !shop to buy XPX rewards and crate tokens.",
-            "Open crates from inside the shop flow.",
+            "Open cases from inside the shop flow for rarity-based drops.",
             "Bonuses, missions, and achievements feed your economy.",
+            "Rare and better case drops can grant temporary XP boosters.",
             "Use !wallet to see your balance and totals."
         };
 
@@ -3102,6 +3140,110 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
 
         var tag = GetCurrentReward(_levelCurve.GetState(progress.TotalXp).Level)?.Tag;
         return string.IsNullOrWhiteSpace(tag) ? "NO TAG" : tag;
+    }
+
+    private static string NormalizeCrateRarity(string? rarity)
+    {
+        if (string.IsNullOrWhiteSpace(rarity))
+        {
+            return "Common";
+        }
+
+        return rarity.Trim().ToLowerInvariant() switch
+        {
+            "legendary" => "Legendary",
+            "epic" => "Epic",
+            "rare" => "Rare",
+            _ => "Common"
+        };
+    }
+
+    private void NormalizeActiveBoosts(PlayerProgress progress, bool persistChanges = false)
+    {
+        var changed = false;
+        if (progress.XpBoostPercent < 0)
+        {
+            progress.XpBoostPercent = 0;
+            changed = true;
+        }
+
+        if (progress.XpBoostPercent <= 0 && progress.XpBoostExpiresUtc is not null)
+        {
+            progress.XpBoostExpiresUtc = null;
+            changed = true;
+        }
+
+        if (progress.XpBoostPercent > 0 && progress.XpBoostExpiresUtc is null)
+        {
+            progress.XpBoostPercent = 0;
+            changed = true;
+        }
+
+        if (progress.XpBoostExpiresUtc is not null && progress.XpBoostExpiresUtc <= DateTimeOffset.UtcNow)
+        {
+            progress.XpBoostPercent = 0;
+            progress.XpBoostExpiresUtc = null;
+            changed = true;
+        }
+
+        if (changed && persistChanges && _repository is not null)
+        {
+            _repository.SavePlayer(progress);
+        }
+    }
+
+    private int GetActiveXpBoostPercent(PlayerProgress progress)
+    {
+        NormalizeActiveBoosts(progress, persistChanges: true);
+        return progress.XpBoostPercent > 0 && progress.XpBoostExpiresUtc is not null ? progress.XpBoostPercent : 0;
+    }
+
+    private long CalculateXpBoostBonus(PlayerProgress progress, long baseDelta)
+    {
+        var boostPercent = GetActiveXpBoostPercent(progress);
+        if (boostPercent <= 0 || baseDelta <= 0)
+        {
+            return 0;
+        }
+
+        return (long)Math.Floor(baseDelta * (boostPercent / 100d));
+    }
+
+    private string GetActiveXpBoostLabel(PlayerProgress? progress)
+    {
+        if (progress is null)
+        {
+            return "No active XP boost";
+        }
+
+        NormalizeActiveBoosts(progress, persistChanges: true);
+        if (progress.XpBoostPercent <= 0 || progress.XpBoostExpiresUtc is null)
+        {
+            return "No active XP boost";
+        }
+
+        var remaining = progress.XpBoostExpiresUtc.Value - DateTimeOffset.UtcNow;
+        if (remaining <= TimeSpan.Zero)
+        {
+            return "No active XP boost";
+        }
+
+        return $"+{progress.XpBoostPercent}% XP for {FormatRemainingDuration(remaining)}";
+    }
+
+    private static string FormatRemainingDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+        {
+            return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+        }
+
+        if (duration.TotalMinutes >= 1)
+        {
+            return $"{Math.Max(1, (int)Math.Ceiling(duration.TotalMinutes))}m";
+        }
+
+        return $"{Math.Max(1, (int)Math.Ceiling(duration.TotalSeconds))}s";
     }
 
     private string NormalizeStoredPlayerName(string? playerName)

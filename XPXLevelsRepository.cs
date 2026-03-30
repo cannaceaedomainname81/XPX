@@ -28,6 +28,8 @@ public sealed class XPXLevelsRepository
                 total_xp INTEGER NOT NULL DEFAULT 0,
                 credits INTEGER NOT NULL DEFAULT 0,
                 crate_tokens INTEGER NOT NULL DEFAULT 0,
+                xp_boost_percent INTEGER NOT NULL DEFAULT 0,
+                xp_boost_expires_utc TEXT NULL,
                 created_utc TEXT NOT NULL,
                 updated_utc TEXT NOT NULL
             );
@@ -35,6 +37,8 @@ public sealed class XPXLevelsRepository
 
         EnsureColumn(connection, "players", "credits", "INTEGER NOT NULL DEFAULT 0");
         EnsureColumn(connection, "players", "crate_tokens", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "players", "xp_boost_percent", "INTEGER NOT NULL DEFAULT 0");
+        EnsureColumn(connection, "players", "xp_boost_expires_utc", "TEXT NULL");
 
         connection.Execute("""
             CREATE TABLE IF NOT EXISTS player_stats (
@@ -118,7 +122,9 @@ public sealed class XPXLevelsRepository
                 PlayerName = playerName,
                 TotalXp = 0,
                 Credits = 0,
-                CrateTokens = 0
+                CrateTokens = 0,
+                XpBoostPercent = 0,
+                XpBoostExpiresUtc = null
             };
 
             SavePlayer(created);
@@ -157,13 +163,15 @@ public sealed class XPXLevelsRepository
         using var connection = OpenConnection();
         connection.Execute(
             """
-            INSERT INTO players (steamid, player_name, total_xp, credits, crate_tokens, created_utc, updated_utc)
-            VALUES (@SteamId, @PlayerName, @TotalXp, @Credits, @CrateTokens, @NowUtc, @NowUtc)
+            INSERT INTO players (steamid, player_name, total_xp, credits, crate_tokens, xp_boost_percent, xp_boost_expires_utc, created_utc, updated_utc)
+            VALUES (@SteamId, @PlayerName, @TotalXp, @Credits, @CrateTokens, @XpBoostPercent, @XpBoostExpiresUtc, @NowUtc, @NowUtc)
             ON CONFLICT(steamid) DO UPDATE SET
                 player_name = excluded.player_name,
                 total_xp = excluded.total_xp,
                 credits = excluded.credits,
                 crate_tokens = excluded.crate_tokens,
+                xp_boost_percent = excluded.xp_boost_percent,
+                xp_boost_expires_utc = excluded.xp_boost_expires_utc,
                 updated_utc = excluded.updated_utc;
             """,
             new
@@ -173,6 +181,8 @@ public sealed class XPXLevelsRepository
                 progress.TotalXp,
                 progress.Credits,
                 progress.CrateTokens,
+                progress.XpBoostPercent,
+                XpBoostExpiresUtc = progress.XpBoostExpiresUtc?.ToString("O"),
                 NowUtc = DateTimeOffset.UtcNow.ToString("O")
             });
     }
@@ -424,7 +434,7 @@ public sealed class XPXLevelsRepository
         using var connection = OpenConnection();
         var rows = connection.Query<PlayerRow>(
             """
-            SELECT steamid, player_name, total_xp, credits, crate_tokens
+            SELECT steamid, player_name, total_xp, credits, crate_tokens, xp_boost_percent, xp_boost_expires_utc
             FROM players
             ORDER BY total_xp DESC, steamid ASC
             LIMIT @Limit;
@@ -445,7 +455,7 @@ public sealed class XPXLevelsRepository
     {
         return connection.QuerySingleOrDefault<PlayerRow>(
             """
-            SELECT steamid, player_name, total_xp, credits, crate_tokens
+            SELECT steamid, player_name, total_xp, credits, crate_tokens, xp_boost_percent, xp_boost_expires_utc
             FROM players
             WHERE steamid = @SteamId;
             """,
@@ -460,7 +470,13 @@ public sealed class XPXLevelsRepository
             PlayerName = row.PlayerName,
             TotalXp = row.TotalXp,
             Credits = row.Credits,
-            CrateTokens = row.CrateTokens
+            CrateTokens = row.CrateTokens,
+            XpBoostPercent = row.XpBoostPercent,
+            XpBoostExpiresUtc = string.IsNullOrWhiteSpace(row.XpBoostExpiresUtc)
+                ? null
+                : DateTimeOffset.TryParse(row.XpBoostExpiresUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedBoostExpiry)
+                    ? parsedBoostExpiry
+                    : null
         };
     }
 
@@ -537,6 +553,8 @@ public sealed class XPXLevelsRepository
         public long TotalXp { get; init; }
         public int Credits { get; init; }
         public int CrateTokens { get; init; }
+        public int XpBoostPercent { get; init; }
+        public string? XpBoostExpiresUtc { get; init; }
     }
 
     private sealed class PlayerStatsRow

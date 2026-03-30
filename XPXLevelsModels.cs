@@ -7,6 +7,8 @@ public sealed class PlayerProgress
     public long TotalXp { get; set; }
     public int Credits { get; set; }
     public int CrateTokens { get; set; }
+    public int XpBoostPercent { get; set; }
+    public DateTimeOffset? XpBoostExpiresUtc { get; set; }
     public DateTimeOffset LastGambleAttemptUtc { get; set; } = DateTimeOffset.MinValue;
 }
 
@@ -101,8 +103,10 @@ public sealed class CrateDefinition
 public sealed class CrateRewardDefinition
 {
     public string Label { get; set; } = string.Empty;
+    public string Rarity { get; set; } = "Common";
     public ShopRewardType RewardType { get; set; } = ShopRewardType.Credits;
     public int RewardAmount { get; set; }
+    public int DurationMinutes { get; set; }
     public int Weight { get; set; } = 1;
 }
 
@@ -225,7 +229,8 @@ public enum ShopRewardType
 {
     Xp,
     Credits,
-    CrateToken
+    CrateToken,
+    XpBoost
 }
 
 public enum SpecialRoundType

@@ -109,16 +109,21 @@ public sealed class XPXLevelsConfig : BasePluginConfig
         {
             Key = "xpx_case",
             Name = "XPX Case",
-            Description = "A weighted reward crate with XP and credit drops.",
+            Description = "A weighted reward crate with Common, Rare, Epic, and Legendary XPX drops.",
             CostCredits = 50,
             Rewards =
             [
-                new() { Label = "25 Credits", RewardType = ShopRewardType.Credits, RewardAmount = 25, Weight = 32 },
-                new() { Label = "60 Credits", RewardType = ShopRewardType.Credits, RewardAmount = 60, Weight = 18 },
-                new() { Label = "150 XP", RewardType = ShopRewardType.Xp, RewardAmount = 150, Weight = 24 },
-                new() { Label = "400 XP", RewardType = ShopRewardType.Xp, RewardAmount = 400, Weight = 14 },
-                new() { Label = "1 Crate Token", RewardType = ShopRewardType.CrateToken, RewardAmount = 1, Weight = 8 },
-                new() { Label = "100 Credits", RewardType = ShopRewardType.Credits, RewardAmount = 100, Weight = 4 }
+                new() { Label = "40 Credits", Rarity = "Common", RewardType = ShopRewardType.Credits, RewardAmount = 40, Weight = 26 },
+                new() { Label = "120 XP", Rarity = "Common", RewardType = ShopRewardType.Xp, RewardAmount = 120, Weight = 24 },
+                new() { Label = "1 Crate Token", Rarity = "Common", RewardType = ShopRewardType.CrateToken, RewardAmount = 1, Weight = 14 },
+                new() { Label = "90 Credits", Rarity = "Rare", RewardType = ShopRewardType.Credits, RewardAmount = 90, Weight = 14 },
+                new() { Label = "350 XP", Rarity = "Rare", RewardType = ShopRewardType.Xp, RewardAmount = 350, Weight = 11 },
+                new() { Label = "10% XP Boost", Rarity = "Rare", RewardType = ShopRewardType.XpBoost, RewardAmount = 10, DurationMinutes = 10, Weight = 6 },
+                new() { Label = "180 Credits", Rarity = "Epic", RewardType = ShopRewardType.Credits, RewardAmount = 180, Weight = 7 },
+                new() { Label = "750 XP", Rarity = "Epic", RewardType = ShopRewardType.Xp, RewardAmount = 750, Weight = 5 },
+                new() { Label = "20% XP Boost", Rarity = "Epic", RewardType = ShopRewardType.XpBoost, RewardAmount = 20, DurationMinutes = 10, Weight = 4 },
+                new() { Label = "1500 XP", Rarity = "Legendary", RewardType = ShopRewardType.Xp, RewardAmount = 1500, Weight = 2 },
+                new() { Label = "25% XP Boost", Rarity = "Legendary", RewardType = ShopRewardType.XpBoost, RewardAmount = 25, DurationMinutes = 20, Weight = 1 }
             ]
         }
     ];

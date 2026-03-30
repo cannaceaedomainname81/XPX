@@ -18,8 +18,20 @@ public sealed class XPXLevelsConfig : BasePluginConfig
     [JsonPropertyName("RoundWinXp")] public int RoundWinXp { get; set; } = 30;
     [JsonPropertyName("BombPlantXp")] public int BombPlantXp { get; set; } = 20;
     [JsonPropertyName("BombDefuseXp")] public int BombDefuseXp { get; set; } = 25;
+    [JsonPropertyName("AssistXp")] public int AssistXp { get; set; } = 15;
+    [JsonPropertyName("MvpXp")] public int MvpXp { get; set; } = 25;
+    [JsonPropertyName("ClutchXp")] public int ClutchXp { get; set; } = 40;
+    [JsonPropertyName("FirstBloodXp")] public int FirstBloodXp { get; set; } = 15;
+    [JsonPropertyName("CasualCompetitiveKillCredits")] public int CasualCompetitiveKillCredits { get; set; } = 2;
+    [JsonPropertyName("FastModeKillCredits")] public int FastModeKillCredits { get; set; } = 1;
+    [JsonPropertyName("RoundWinCredits")] public int RoundWinCredits { get; set; } = 3;
+    [JsonPropertyName("AssistCredits")] public int AssistCredits { get; set; } = 1;
+    [JsonPropertyName("MvpCredits")] public int MvpCredits { get; set; } = 2;
+    [JsonPropertyName("FirstBloodCredits")] public int FirstBloodCredits { get; set; } = 1;
+    [JsonPropertyName("ClutchCredits")] public int ClutchCredits { get; set; } = 4;
     [JsonPropertyName("BotXpMultiplier")] public double BotXpMultiplier { get; set; } = 0.30d;
     [JsonPropertyName("ShowKillXpMessages")] public bool ShowKillXpMessages { get; set; } = true;
+    [JsonPropertyName("CurrencyName")] public string CurrencyName { get; set; } = "Credits";
     [JsonPropertyName("GambleWinChancePercent")] public int GambleWinChancePercent { get; set; } = 50;
     [JsonPropertyName("GambleMinXp")] public int GambleMinXp { get; set; } = 10;
     [JsonPropertyName("GambleMaxXp")] public int GambleMaxXp { get; set; } = 10000;
@@ -34,8 +46,78 @@ public sealed class XPXLevelsConfig : BasePluginConfig
     [JsonPropertyName("WelcomeMessages")] public List<string> WelcomeMessages { get; set; } =
     [
         "{Gold}Welcome back {White}{NAME}{Gold} to {White}{SERVER}{Gold}.",
-        "{LightBlue}Use {White}!level {LightBlue}| {White}!rank {LightBlue}| {White}!top {LightBlue}| {White}!rtv {LightBlue}| {White}!help {LightBlue}| {White}!me",
+        "{LightBlue}Use {White}!level {LightBlue}| {White}!rank {LightBlue}| {White}!top {LightBlue}| {White}!stats {LightBlue}| {White}!missions {LightBlue}| {White}!help {LightBlue}| {White}!me",
         "{Yellow}You are level {White}{LEVEL}{Yellow} with {White}{TOTAL_XP}{Yellow} XP. Next unlock: {White}{NEXT_REWARD}{Yellow}."
+    ];
+
+    [JsonPropertyName("KillstreakBonuses")] public List<KillstreakBonusOption> KillstreakBonuses { get; set; } =
+    [
+        new() { Threshold = 3, RewardXp = 10, RewardCredits = 1, Label = "Streak x3" },
+        new() { Threshold = 5, RewardXp = 25, RewardCredits = 2, Label = "Streak x5" },
+        new() { Threshold = 8, RewardXp = 45, RewardCredits = 4, Label = "Streak x8" }
+    ];
+
+    [JsonPropertyName("MultikillBonuses")] public List<MultikillBonusOption> MultikillBonuses { get; set; } =
+    [
+        new() { Kills = 2, RewardXp = 10, RewardCredits = 1, Label = "Double kill" },
+        new() { Kills = 3, RewardXp = 20, RewardCredits = 2, Label = "Triple kill" },
+        new() { Kills = 4, RewardXp = 35, RewardCredits = 3, Label = "Quad kill" },
+        new() { Kills = 5, RewardXp = 60, RewardCredits = 5, Label = "Ace" }
+    ];
+
+    [JsonPropertyName("DailyMissions")] public List<MissionDefinition> DailyMissions { get; set; } =
+    [
+        new() { Key = "daily_headshots", Title = "Daily Headshots", Description = "Land 25 headshots", Scope = "daily", Objective = MissionObjective.Headshots, Goal = 25, RewardXp = 250, RewardCredits = 40 },
+        new() { Key = "daily_wins", Title = "Daily Winner", Description = "Win 3 maps", Scope = "daily", Objective = MissionObjective.Wins, Goal = 3, RewardXp = 300, RewardCredits = 50 },
+        new() { Key = "daily_knife_kills", Title = "Daily Blade", Description = "Get 5 knife kills", Scope = "daily", Objective = MissionObjective.KnifeKills, Goal = 5, RewardXp = 220, RewardCredits = 35 },
+        new() { Key = "daily_objective", Title = "Daily Objective", Description = "Plant or defuse 4 bombs", Scope = "daily", Objective = MissionObjective.BombObjectives, Goal = 4, RewardXp = 240, RewardCredits = 35 },
+        new() { Key = "daily_playtime", Title = "Daily Grind", Description = "Play for 30 minutes", Scope = "daily", Objective = MissionObjective.PlayMinutes, Goal = 30, RewardXp = 200, RewardCredits = 30 }
+    ];
+
+    [JsonPropertyName("WeeklyMissions")] public List<MissionDefinition> WeeklyMissions { get; set; } =
+    [
+        new() { Key = "weekly_kills", Title = "Weekly Slayer", Description = "Get 125 kills", Scope = "weekly", Objective = MissionObjective.Kills, Goal = 125, RewardXp = 1000, RewardCredits = 150 },
+        new() { Key = "weekly_headshots", Title = "Weekly Sharpshooter", Description = "Land 60 headshots", Scope = "weekly", Objective = MissionObjective.Headshots, Goal = 60, RewardXp = 1000, RewardCredits = 150 },
+        new() { Key = "weekly_wins", Title = "Weekly Closer", Description = "Win 10 maps", Scope = "weekly", Objective = MissionObjective.Wins, Goal = 10, RewardXp = 1200, RewardCredits = 180 },
+        new() { Key = "weekly_assists", Title = "Weekly Support", Description = "Earn 25 assists", Scope = "weekly", Objective = MissionObjective.Assists, Goal = 25, RewardXp = 850, RewardCredits = 120 }
+    ];
+
+    [JsonPropertyName("Achievements")] public List<AchievementDefinition> Achievements { get; set; } =
+    [
+        new() { Key = "achievement_first_blood", Title = "Opening Move", Description = "Earn your first first blood", Badge = "OPENER", Objective = MissionObjective.FirstBloods, Goal = 1, RewardCredits = 20 },
+        new() { Key = "achievement_100_headshots", Title = "Headhunter", Description = "Land 100 headshots", Badge = "HEADHUNTER", Objective = MissionObjective.Headshots, Goal = 100, RewardCredits = 75 },
+        new() { Key = "achievement_25_knife_kills", Title = "Knife Artist", Description = "Get 25 knife kills", Badge = "KNIFE ARTIST", Objective = MissionObjective.KnifeKills, Goal = 25, RewardCredits = 75 },
+        new() { Key = "achievement_250_kills", Title = "Frontliner", Description = "Get 250 kills", Badge = "FRONTLINER", Objective = MissionObjective.Kills, Goal = 250, RewardCredits = 100 },
+        new() { Key = "achievement_25_mvps", Title = "MVP Machine", Description = "Earn 25 MVPs", Badge = "MVP MACHINE", Objective = MissionObjective.Mvps, Goal = 25, RewardCredits = 100 },
+        new() { Key = "achievement_10_clutches", Title = "Clutch King", Description = "Win 10 clutch rounds", Badge = "CLUTCH KING", Objective = MissionObjective.ClutchWins, Goal = 10, RewardCredits = 120 }
+    ];
+
+    [JsonPropertyName("ShopItems")] public List<ShopItemDefinition> ShopItems { get; set; } =
+    [
+        new() { Key = "shop_xp_small", Name = "Small XP Cache", Description = "Instantly grants 250 XP", RewardType = ShopRewardType.Xp, RewardAmount = 250, CostCredits = 30 },
+        new() { Key = "shop_xp_big", Name = "Large XP Cache", Description = "Instantly grants 1000 XP", RewardType = ShopRewardType.Xp, RewardAmount = 1000, CostCredits = 95 },
+        new() { Key = "shop_crate_token", Name = "Crate Token", Description = "Adds one XPX crate token", RewardType = ShopRewardType.CrateToken, RewardAmount = 1, CostCredits = 45 },
+        new() { Key = "shop_credits_bundle", Name = "Credit Bundle", Description = "Instantly grants 25 credits", RewardType = ShopRewardType.Credits, RewardAmount = 25, CostCredits = 40 }
+    ];
+
+    [JsonPropertyName("Crates")] public List<CrateDefinition> Crates { get; set; } =
+    [
+        new()
+        {
+            Key = "xpx_case",
+            Name = "XPX Case",
+            Description = "A weighted reward crate with XP and credit drops.",
+            CostCredits = 50,
+            Rewards =
+            [
+                new() { Label = "25 Credits", RewardType = ShopRewardType.Credits, RewardAmount = 25, Weight = 32 },
+                new() { Label = "60 Credits", RewardType = ShopRewardType.Credits, RewardAmount = 60, Weight = 18 },
+                new() { Label = "150 XP", RewardType = ShopRewardType.Xp, RewardAmount = 150, Weight = 24 },
+                new() { Label = "400 XP", RewardType = ShopRewardType.Xp, RewardAmount = 400, Weight = 14 },
+                new() { Label = "1 Crate Token", RewardType = ShopRewardType.CrateToken, RewardAmount = 1, Weight = 8 },
+                new() { Label = "100 Credits", RewardType = ShopRewardType.Credits, RewardAmount = 100, Weight = 4 }
+            ]
+        }
     ];
 
     [JsonPropertyName("MapPool")] public List<string> MapPool { get; set; } =
@@ -111,6 +193,22 @@ public sealed class XPXLevelsConfig : BasePluginConfig
         new() { Level = 350, Tag = "[VOIDWALKER]", KnifeItem = "weapon_knife_karambit" },
         new() { Level = 500, Tag = "[SOLARIS]", KnifeItem = "weapon_knife_butterfly" }
     ];
+}
+
+public sealed class KillstreakBonusOption
+{
+    [JsonPropertyName("Threshold")] public int Threshold { get; set; }
+    [JsonPropertyName("RewardXp")] public int RewardXp { get; set; }
+    [JsonPropertyName("RewardCredits")] public int RewardCredits { get; set; }
+    [JsonPropertyName("Label")] public string Label { get; set; } = string.Empty;
+}
+
+public sealed class MultikillBonusOption
+{
+    [JsonPropertyName("Kills")] public int Kills { get; set; }
+    [JsonPropertyName("RewardXp")] public int RewardXp { get; set; }
+    [JsonPropertyName("RewardCredits")] public int RewardCredits { get; set; }
+    [JsonPropertyName("Label")] public string Label { get; set; } = string.Empty;
 }
 
 public sealed class GameModeOption

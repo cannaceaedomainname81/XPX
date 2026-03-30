@@ -20,7 +20,7 @@ using GameTimer = CounterStrikeSharp.API.Modules.Timers.Timer;
 namespace XPXLevels;
 
 [MinimumApiVersion(80)]
-public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
+public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
 {
     private const int DefaultBotCount = 10;
     private const float TransientPanelDurationSeconds = 6.0f;
@@ -83,7 +83,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
     private string? _transitionSnapshotPath;
 
     public override string ModuleName => "XPX Levels";
-    public override string ModuleVersion => "1.3.15";
+    public override string ModuleVersion => "1.4.0-dev";
     public override string ModuleAuthor => "OpenAI";
     public override string ModuleDescription => "Levels, XP rewards, RTV, and admin tools for XPX CS2.";
 
@@ -102,6 +102,17 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
         config.RoundWinXp = Math.Max(0, config.RoundWinXp);
         config.BombPlantXp = Math.Max(0, config.BombPlantXp);
         config.BombDefuseXp = Math.Max(0, config.BombDefuseXp);
+        config.AssistXp = Math.Max(0, config.AssistXp);
+        config.MvpXp = Math.Max(0, config.MvpXp);
+        config.ClutchXp = Math.Max(0, config.ClutchXp);
+        config.FirstBloodXp = Math.Max(0, config.FirstBloodXp);
+        config.CasualCompetitiveKillCredits = Math.Max(0, config.CasualCompetitiveKillCredits);
+        config.FastModeKillCredits = Math.Max(0, config.FastModeKillCredits);
+        config.RoundWinCredits = Math.Max(0, config.RoundWinCredits);
+        config.AssistCredits = Math.Max(0, config.AssistCredits);
+        config.MvpCredits = Math.Max(0, config.MvpCredits);
+        config.FirstBloodCredits = Math.Max(0, config.FirstBloodCredits);
+        config.ClutchCredits = Math.Max(0, config.ClutchCredits);
         config.BotXpMultiplier = Math.Clamp(config.BotXpMultiplier, 0d, 1d);
         config.GambleWinChancePercent = Math.Clamp(config.GambleWinChancePercent, 1, 99);
         config.GambleMinXp = Math.Max(1, config.GambleMinXp);
@@ -115,6 +126,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
         config.TopCount = Math.Clamp(config.TopCount, 3, 15);
         config.ChatPrefix = string.IsNullOrWhiteSpace(config.ChatPrefix) ? "{Green}[XPX]{Default}" : config.ChatPrefix.Trim();
         config.ServerName = string.IsNullOrWhiteSpace(config.ServerName) ? "XPX CS2" : config.ServerName.Trim();
+        config.CurrencyName = string.IsNullOrWhiteSpace(config.CurrencyName) ? "Credits" : config.CurrencyName.Trim();
         config.KickReason = string.IsNullOrWhiteSpace(config.KickReason) ? "Removed by an XPX admin." : config.KickReason.Trim();
         config.WelcomeMessages = config.WelcomeMessages.Where(static message => !string.IsNullOrWhiteSpace(message)).ToList();
         config.MapPool = config.MapPool.Where(static map => !string.IsNullOrWhiteSpace(map))
@@ -141,6 +153,29 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
             .ToList();
         config.Rewards = config.Rewards.Where(reward => reward.Level > 0 && reward.Level <= config.MaxLevel)
             .OrderBy(reward => reward.Level)
+            .ToList();
+        config.KillstreakBonuses = config.KillstreakBonuses
+            .Where(static bonus => bonus.Threshold > 1)
+            .OrderBy(static bonus => bonus.Threshold)
+            .ToList();
+        config.MultikillBonuses = config.MultikillBonuses
+            .Where(static bonus => bonus.Kills > 1)
+            .OrderBy(static bonus => bonus.Kills)
+            .ToList();
+        config.DailyMissions = config.DailyMissions
+            .Where(static mission => !string.IsNullOrWhiteSpace(mission.Key) && mission.Goal > 0)
+            .ToList();
+        config.WeeklyMissions = config.WeeklyMissions
+            .Where(static mission => !string.IsNullOrWhiteSpace(mission.Key) && mission.Goal > 0)
+            .ToList();
+        config.Achievements = config.Achievements
+            .Where(static achievement => !string.IsNullOrWhiteSpace(achievement.Key) && achievement.Goal > 0)
+            .ToList();
+        config.ShopItems = config.ShopItems
+            .Where(static item => !string.IsNullOrWhiteSpace(item.Key) && item.CostCredits >= 0)
+            .ToList();
+        config.Crates = config.Crates
+            .Where(crate => !string.IsNullOrWhiteSpace(crate.Key) && crate.Rewards.Count > 0)
             .ToList();
 
         Config = config;
@@ -245,6 +280,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
             if (player is not null && IsRealPlayer(player))
             {
                 ApplyRewardState(player, progress);
+                ApplySpecialLoadout(player);
             }
         }, TimerFlags.STOP_ON_MAPCHANGE);
 
@@ -281,6 +317,11 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
         }
 
         AdjustXp(killer, xpToAward, reason, Config.ShowKillXpMessages);
+        HandleKillFeatureProgress(killer, deadPlayer, @event.Weapon, @event.Headshot, knifeKill);
+        if (IsRealPlayer(@event.Assister) && @event.Assister != attacker && @event.Assister != victim)
+        {
+            HandleAssistFeatureProgress(@event.Assister!);
+        }
         return HookResult.Continue;
     }
 
@@ -293,6 +334,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
         }
 
         AdjustXp(@event.Userid!, Config.BombPlantXp, "bomb plant", true);
+        HandleBombFeatureProgress(@event.Userid!, MissionObjective.BombPlants);
         return HookResult.Continue;
     }
 
@@ -305,6 +347,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
         }
 
         AdjustXp(@event.Userid!, Config.BombDefuseXp, "bomb defuse", true);
+        HandleBombFeatureProgress(@event.Userid!, MissionObjective.BombDefuses);
         return HookResult.Continue;
     }
 
@@ -326,6 +369,8 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
         {
             AdjustXp(player, Config.RoundWinXp, "round win", true);
         }
+
+        HandleRoundWinFeatureProgress(winningTeam);
 
         return HookResult.Continue;
     }
@@ -632,6 +677,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
     {
         ResetRtvState();
         ResetTransientUiState();
+        ResetFeatureRoundState();
         ScheduleOnlinePlayerSyncs();
         AddTimer(90.0f, ClearTransitionSnapshot, TimerFlags.STOP_ON_MAPCHANGE);
     }
@@ -663,6 +709,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
             }
 
             var joinedPlayer = player!;
+            EnsureFeatureStateLoaded(joinedPlayer);
             ApplyRewardState(joinedPlayer, progress);
             foreach (var message in Config.WelcomeMessages)
             {
@@ -688,6 +735,8 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
         {
             PersistProgressSafely(progress);
         }
+
+        UnloadFeatureStateForPlayer(steamId);
     }
 
     private HookResult OnAnyCommandPre(CCSPlayerController? player, CommandInfo command)
@@ -712,6 +761,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
             PersistProgressSafely(progress);
         }
 
+        SaveAllFeatureState();
         SaveTransitionSnapshot();
     }
 
@@ -731,6 +781,12 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
         }
 
         if (progress.TotalXp > storedProgress.TotalXp)
+        {
+            _repository.SavePlayer(progress);
+            return;
+        }
+
+        if (progress.Credits != storedProgress.Credits || progress.CrateTokens != storedProgress.CrateTokens)
         {
             _repository.SavePlayer(progress);
             return;
@@ -911,6 +967,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
             menu.AddMenuOption("Change map", (admin, _) => OpenChangeMapMenu(admin));
             menu.AddMenuOption("Restart current map", (admin, _) => RestartCurrentMap(admin.PlayerName));
             menu.AddMenuOption("Change game mode", (admin, _) => OpenGameModeMenu(admin));
+            menu.AddMenuOption("Special rounds", (admin, _) => OpenSpecialRoundsMenu(admin));
         }
 
         if (HasPermission(player, PermissionKick))
@@ -954,6 +1011,11 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
         menu.AddMenuOption("My level overview", (_, _) => OpenLevelOverviewMenu(player));
         menu.AddMenuOption("My rank", (_, _) => OpenRankOverviewMenu(player));
         menu.AddMenuOption("Top players", (_, _) => OpenTopOverviewMenu(player));
+        menu.AddMenuOption("Stats", (_, _) => OpenStatsMenu(player));
+        menu.AddMenuOption("Missions", (_, _) => OpenMissionsMenu(player));
+        menu.AddMenuOption("Achievements", (_, _) => OpenAchievementsMenu(player));
+        menu.AddMenuOption("Shop", (_, _) => OpenShopMenu(player));
+        menu.AddMenuOption("Crates / wallet", (_, _) => OpenCrateMenu(player));
         menu.AddMenuOption(_activeMapVote is null ? "Rock the vote" : "Vote for next map", (_, _) =>
         {
             if (_activeMapVote is null)
@@ -1774,6 +1836,8 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
             if (reloadFromRepository)
             {
                 progress.TotalXp = loadedProgress.TotalXp;
+                progress.Credits = loadedProgress.Credits;
+                progress.CrateTokens = loadedProgress.CrateTokens;
             }
         }
         else
@@ -1796,6 +1860,7 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
 
         _players[steamId] = progress;
         _slotToSteamId[player.Slot] = steamId;
+        EnsureFeatureStateLoaded(player);
         return progress;
     }
 
@@ -2182,17 +2247,19 @@ public sealed class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevelsConfig>
             $"<font color='white'>Max level:</font> <font color='gold'>{Config.MaxLevel}</font>",
             $"<font color='white'>Your tag:</font> <font color='gold'>{tag}</font>",
             $"<font color='white'>Current mode:</font> <font color='gold'>{currentMode}</font>",
-            "<font color='white'>How it works:</font> <font color='gold'>Play, earn XP, level up, unlock tags and knife rewards.</font>",
+            "<font color='white'>How it works:</font> <font color='gold'>Play, earn XP and credits, finish missions, unlock badges, and climb to level 500.</font>",
             "<font color='white'>Warmup:</font> <font color='gold'>No XP is awarded during warmup.</font>",
-            "<font color='white'>Player commands:</font> <font color='gold'>!me !level !rank !top !rtv !vote !help !gamble &lt;xp&gt;</font>",
+            "<font color='white'>Player commands:</font> <font color='gold'>!me !level !rank !top !stats !missions !achievements !shop !crate !wallet !rtv !vote !help !gamble &lt;xp&gt;</font>",
+            "<font color='white'>Progression:</font> <font color='gold'>Daily and weekly missions reward XP and credits. Achievements unlock permanent badges.</font>",
+            $"<font color='white'>Economy:</font> <font color='gold'>Spend {Config.CurrencyName} in !shop or on crate tokens in !crate.</font>",
             $"<font color='white'>Next reward:</font> <font color='gold'>{nextRewardText}</font>",
             "<font color='white'>Menu input:</font> <font color='gold'>Use !bindmenu for 1-9 keys, or type !1-!9 in chat while a menu is open</font>",
-            "<font color='deepskyblue'>Type !help again to close, or wait 60 seconds.</font>"
+            "<font color='deepskyblue'>Type !help again to close, or wait a few seconds.</font>"
         };
 
         if (HasPermission(player, PermissionMenu) || HasPermission(player, PermissionKick))
         {
-            lines.Insert(lines.Count - 2, "<font color='white'>Admin commands:</font> <font color='gold'>!admin !kickbots !addbots [count]</font>");
+            lines.Insert(lines.Count - 2, "<font color='white'>Admin commands:</font> <font color='gold'>!admin !kickbots !addbots [count] !kniferound !pistolround !warmupevent</font>");
         }
 
         return string.Join("<br>", lines);

@@ -1,5 +1,14 @@
 # XPX
 
+> Persistent progression, missions, economy, and admin tooling for serious CS2 community servers.
+
+![Counter-Strike 2](https://img.shields.io/badge/Counter--Strike_2-CS2-f28c28)
+![CounterStrikeSharp](https://img.shields.io/badge/CounterStrikeSharp-1.0.364-1f6feb)
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)
+![Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)
+![SQLite](https://img.shields.io/badge/Storage-SQLite-003B57?logo=sqlite)
+![Last Commit](https://img.shields.io/github/last-commit/Azuyah/XPX)
+
 XPX is a CounterStrikeSharp plugin for Counter-Strike 2 that adds a full server-side progression layer:
 
 - level and XP progression up to level `500`
@@ -11,6 +20,19 @@ XPX is a CounterStrikeSharp plugin for Counter-Strike 2 that adds a full server-
 - forced global loadout modes for rifle, pistol, or knife-only servers
 
 The plugin is designed for self-hosted CS2 community servers and is currently deployed with a local Windows + SteamCMD setup.
+
+## Preview
+
+| Player Hub | Admin Menu | Shop / Crates |
+| --- | --- | --- |
+| Screenshot placeholder: `docs/screenshots/player-hub.png` | Screenshot placeholder: `docs/screenshots/admin-menu.png` | Screenshot placeholder: `docs/screenshots/shop-crates.png` |
+
+Additional recommended captures:
+
+- `docs/screenshots/help-menu.png`
+- `docs/screenshots/stats-menu.png`
+- `docs/screenshots/crate-result.png`
+- `docs/screenshots/mission-progress.png`
 
 ## What XPX Includes
 

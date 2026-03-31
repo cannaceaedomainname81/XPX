@@ -9,8 +9,10 @@ public sealed class XPXNumberMenu : BaseMenu
 {
     private readonly BasePlugin _plugin;
 
-    public int ItemsPerPage { get; set; } = 6;
+    public int ItemsPerPage { get; set; } = 4;
     public List<string> BodyLines { get; } = [];
+    public int BodyLinesPerPage { get; set; } = 3;
+    public bool PaginateBodyWithMenu { get; set; }
     public string TitleColor { get; set; } = "gold";
     public string BodyColor { get; set; } = "silver";
     public string EnabledColor { get; set; } = "white";
@@ -71,7 +73,13 @@ public sealed class XPXNumberMenuInstance : BaseMenuInstance
 
             if (menu.BodyLines.Count > 0)
             {
-                foreach (var bodyLine in menu.BodyLines)
+                var bodyLines = menu.PaginateBodyWithMenu
+                    ? menu.BodyLines
+                        .Skip((CurrentOffset / MenuItemsPerPage) * menu.BodyLinesPerPage)
+                        .Take(menu.BodyLinesPerPage)
+                    : menu.BodyLines;
+
+                foreach (var bodyLine in bodyLines)
                 {
                     builder.Append($"<font color='{menu.BodyColor}'>{bodyLine}</font>");
                     builder.AppendLine("<br>");
@@ -87,6 +95,11 @@ public sealed class XPXNumberMenuInstance : BaseMenuInstance
             for (var index = CurrentOffset; index < Math.Min(CurrentOffset + MenuItemsPerPage, menu.MenuOptions.Count); index++)
             {
                 var option = menu.MenuOptions[index];
+                if (string.IsNullOrWhiteSpace(option.Text))
+                {
+                    continue;
+                }
+
                 var color = option.Disabled ? menu.DisabledColor : menu.EnabledColor;
                 builder.Append($"<font color='{color}'>{keyOffset++}.</font> {option.Text}");
                 builder.AppendLine("<br>");
@@ -94,19 +107,19 @@ public sealed class XPXNumberMenuInstance : BaseMenuInstance
 
             if (HasPrevButton)
             {
-                builder.Append($"<font color='{menu.PrevPageColor}'>7.</font> {Application.Localizer["menu.button.previous"]}");
+                builder.Append($"<font color='{menu.PrevPageColor}'>7.</font> Prev");
                 builder.AppendLine("<br>");
             }
 
             if (HasNextButton)
             {
-                builder.Append($"<font color='{menu.NextPageColor}'>8.</font> {Application.Localizer["menu.button.next"]}");
+                builder.Append($"<font color='{menu.NextPageColor}'>8.</font> Next");
                 builder.AppendLine("<br>");
             }
 
             if (menu.ExitButton)
             {
-                builder.Append($"<font color='{menu.CloseColor}'>9.</font> {Application.Localizer["menu.button.close"]}");
+                builder.Append($"<font color='{menu.CloseColor}'>9.</font> Close");
                 builder.AppendLine("<br>");
             }
 

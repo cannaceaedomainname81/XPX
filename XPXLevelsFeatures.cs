@@ -82,6 +82,26 @@ public sealed partial class XPXLevelsPlugin
         }
     }
 
+    [ConsoleCommand("css_inventory", "Show your XPX case inventory")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnInventoryCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (IsRealPlayer(player))
+        {
+            OpenInventoryMenu(player!);
+        }
+    }
+
+    [ConsoleCommand("css_inv", "Show your XPX case inventory")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnInventoryAliasCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (IsRealPlayer(player))
+        {
+            OpenInventoryMenu(player!);
+        }
+    }
+
     [ConsoleCommand("css_kniferound", "Queue the next round as a knife-only round")]
     [RequiresPermissions(PermissionMap)]
     [CommandHelper(whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
@@ -899,6 +919,25 @@ public sealed partial class XPXLevelsPlugin
             });
     }
 
+    private void OpenInventoryMenu(CCSPlayerController player)
+    {
+        var progress = EnsurePlayerProgress(player);
+        if (progress is null)
+        {
+            return;
+        }
+
+        OpenReadOnlyMenu(player,
+            "Inventory",
+            new[]
+            {
+                $"Crate tokens: {progress.CrateTokens}",
+                $"Active XP boost: {GetActiveXpBoostLabel(progress)}",
+                "XP and Credits from crates apply instantly when opened.",
+                "Temporary boosts stay here while they are active."
+            });
+    }
+
     private void OpenShopMenu(CCSPlayerController player)
     {
         var progress = EnsurePlayerProgress(player);
@@ -911,7 +950,9 @@ public sealed partial class XPXLevelsPlugin
         menu.BodyLines.Add($"{Config.CurrencyName}: {progress.Credits} | Tokens: {progress.CrateTokens}");
         menu.BodyLines.Add($"Active XP boost: {GetActiveXpBoostLabel(progress)}");
 
-        foreach (var item in Config.ShopItems.Where(static item => item.RewardType != ShopRewardType.CrateToken))
+        menu.AddMenuOption("Crates", (target, _) => OpenCrateMenu(target));
+
+        foreach (var item in Config.ShopItems.Where(static item => item.RewardType is not ShopRewardType.CrateToken and not ShopRewardType.Credits))
         {
             var selectedItem = item;
             var affordable = progress.Credits >= item.CostCredits;
@@ -921,8 +962,7 @@ public sealed partial class XPXLevelsPlugin
             }, disabled: !affordable);
         }
 
-        menu.AddMenuOption("Cases & tokens", (target, _) => OpenCrateMenu(target));
-        menu.AddMenuOption("Back to me", (target, _) => OpenMeMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenMeMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -952,7 +992,7 @@ public sealed partial class XPXLevelsPlugin
             _warmupEvent = WarmupEventType.ScoutsOnly;
             ReapplyLoadoutsForAlivePlayers();
         });
-        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -965,8 +1005,7 @@ public sealed partial class XPXLevelsPlugin
             return;
         }
 
-        var menu = CreateMenu($"Cases | {progress.CrateTokens} tokens");
-        menu.BodyLines.Add(crate.Description);
+        var menu = CreateMenu($"Crates | {progress.CrateTokens} tokens");
         menu.BodyLines.Add($"{Config.CurrencyName}: {progress.Credits} | Tokens: {progress.CrateTokens}");
         menu.BodyLines.Add($"Active XP boost: {GetActiveXpBoostLabel(progress)}");
         menu.AddMenuOption($"Open {crate.Name}", (_, _) => OpenCrate(player), disabled: progress.CrateTokens <= 0);
@@ -975,8 +1014,7 @@ public sealed partial class XPXLevelsPlugin
             PurchaseCrateToken(player, crate);
         }, disabled: progress.Credits < crate.CostCredits);
         menu.AddMenuOption("View drop table", (target, _) => OpenCrateDropTableMenu(target, crate));
-        menu.AddMenuOption("Back to shop", (target, _) => OpenShopMenu(target));
-        menu.AddMenuOption("Back to me", (target, _) => OpenMeMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenShopMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1115,7 +1153,7 @@ public sealed partial class XPXLevelsPlugin
             })
             .ToList();
 
-        OpenReadOnlyMenu(player, $"{crate.Name} Drops", lines, "Back to cases", target => OpenCrateMenu(target));
+        OpenReadOnlyMenu(player, $"{crate.Name} Drops", lines, "Back", target => OpenCrateMenu(target));
     }
 
     private void OpenCrateResultMenu(CCSPlayerController player, CrateDefinition crate, CrateRewardDefinition reward, string rewardSummary, PlayerProgress progress)
@@ -1123,7 +1161,6 @@ public sealed partial class XPXLevelsPlugin
         var menu = CreateMenu($"{reward.Rarity} Reward");
         menu.TitleColor = GetCrateRarityColor(reward.Rarity);
         menu.BodyColor = "white";
-        menu.BodyLines.Add($"Case: {crate.Name}");
         menu.BodyLines.Add($"Drop: {reward.Label}");
         menu.BodyLines.Add($"Effect: {rewardSummary}");
         menu.BodyLines.Add($"Remaining tokens: {progress.CrateTokens}");
@@ -1133,8 +1170,8 @@ public sealed partial class XPXLevelsPlugin
             menu.AddMenuOption($"Open {crate.Name} again", (_, _) => OpenCrate(player));
         }
 
-        menu.AddMenuOption("Back to cases", (target, _) => OpenCrateMenu(target));
-        menu.AddMenuOption("Back to shop", (target, _) => OpenShopMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenCrateMenu(target));
+        menu.AddMenuOption("Shop", (target, _) => OpenShopMenu(target));
         OpenXPXMenu(player, menu);
     }
 

@@ -30,7 +30,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     }
 
     private const int DefaultBotCount = 10;
-    private const int ReadOnlyLinesPerPage = 4;
+    private const int ReadOnlyLinesPerPage = 3;
     private const float TransientPanelDurationSeconds = 6.0f;
     private const int TransitionSnapshotLifetimeMinutes = 10;
     private const string PermissionRoot = "@XPX/root";
@@ -1168,6 +1168,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         menu.AddMenuOption("Achievements", (_, _) => OpenAchievementsMenu(player));
         menu.AddMenuOption("Shop", (_, _) => OpenShopMenu(player));
         menu.AddMenuOption("Wallet", (_, _) => OpenWalletMenu(player));
+        menu.AddMenuOption("Inventory", (_, _) => OpenInventoryMenu(player));
         menu.AddMenuOption(_activeMapVote is null ? "Rock the vote" : "Vote for next map", (_, _) =>
         {
             if (_activeMapVote is null)
@@ -1198,13 +1199,14 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         foreach (var map in maps)
         {
             var selectedMap = map;
-            menu.AddMenuOption(selectedMap.DisplayName, (_, _) =>
+            menu.AddMenuOption(selectedMap.DisplayName, (admin, _) =>
             {
-                ChangeMapTo(selectedMap.Key, player.PlayerName);
+                CloseActiveXPXMenu(admin);
+                ChangeMapTo(selectedMap.Key, admin.PlayerName);
             });
         }
 
-        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1229,7 +1231,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
-        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1244,7 +1246,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             menu.AddMenuOption("Disable forced loadout", (admin, _) => DisableForcedLoadoutMode(admin.PlayerName, actor: admin));
         }
 
-        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1260,7 +1262,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
-        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1276,7 +1278,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
-        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1302,7 +1304,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
-        menu.AddMenuOption(add ? "Back to Give XP" : "Back to Remove XP", (target, _) => OpenXpAmountMenu(target, add));
+        menu.AddMenuOption("Back", (target, _) => OpenXpAmountMenu(target, add));
         OpenXPXMenu(player, menu);
     }
 
@@ -1318,7 +1320,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
-        menu.AddMenuOption("Back to admin", (target, _) => OpenAdminMenu(target));
+        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1344,7 +1346,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             });
         }
 
-        menu.AddMenuOption(add ? "Back to Give Credits" : "Back to Remove Credits", (target, _) => OpenCreditsAmountMenu(target, add));
+        menu.AddMenuOption("Back", (target, _) => OpenCreditsAmountMenu(target, add));
         OpenXPXMenu(player, menu);
     }
 
@@ -2549,7 +2551,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         menu.AddMenuOption("Voting & menus", (_, _) => OpenHelpMenusMenu(player));
         if (!autoOpened)
         {
-            menu.AddMenuOption("Back to me", (target, _) => OpenMeMenu(target));
+            menu.AddMenuOption("Back", (target, _) => OpenMeMenu(target));
         }
 
         OpenXPXMenu(player, menu);
@@ -2565,7 +2567,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             $"Warmup gives no XP, so progression starts after warmup."
         };
 
-        OpenReadOnlyMenu(player, "Help | Getting Started", lines, "Back to help", target => OpenHelpMenu(target));
+        OpenReadOnlyMenu(player, "Help | Getting Started", lines, "Back", target => OpenHelpMenu(target));
     }
 
     private void OpenCommandsMenu(CCSPlayerController player)
@@ -2575,12 +2577,12 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             "Core: !me | !help | !commands",
             "Progress: !level | !rank | !top | !stats",
             "Goals: !missions | !achievements",
-            $"Economy: !shop | !wallet | !gamble <xp>",
+            $"Economy: !shop | !wallet | !inventory | !gamble <xp>",
             "Maps: !rtv | !vote",
             "Menus: !bindmenu or !1-!9 while a menu is open"
         };
 
-        OpenReadOnlyMenu(player, "Commands", lines, "Back to help", target => OpenHelpMenu(target));
+        OpenReadOnlyMenu(player, "Commands", lines, "Back", target => OpenHelpMenu(target));
     }
 
     private void OpenHelpProgressionMenu(CCSPlayerController player)
@@ -2594,7 +2596,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             "Tags and knife rewards unlock at milestone levels."
         };
 
-        OpenReadOnlyMenu(player, "Help | Progression", lines, "Back to help", target => OpenHelpMenu(target));
+        OpenReadOnlyMenu(player, "Help | Progression", lines, "Back", target => OpenHelpMenu(target));
     }
 
     private void OpenHelpEconomyMenu(CCSPlayerController player)
@@ -2613,7 +2615,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             "Use !wallet to see your balance and totals."
         };
 
-        OpenReadOnlyMenu(player, "Help | Economy", lines, "Back to help", target => OpenHelpMenu(target));
+        OpenReadOnlyMenu(player, "Help | Economy", lines, "Back", target => OpenHelpMenu(target));
     }
 
     private void OpenHelpMenusMenu(CCSPlayerController player)
@@ -2628,7 +2630,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             "If you do not bind keys, !1-!9 in chat still works."
         };
 
-        OpenReadOnlyMenu(player, "Help | Menus", lines, "Back to help", target => OpenHelpMenu(target));
+        OpenReadOnlyMenu(player, "Help | Menus", lines, "Back", target => OpenHelpMenu(target));
     }
 
     private void ShowHelpPanel(CCSPlayerController player, ulong steamId, bool closeActiveMenu = true)
@@ -2740,7 +2742,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
 
     private void OpenReadOnlyMenu(CCSPlayerController player, string title, IEnumerable<string> lines)
     {
-        OpenReadOnlyMenu(player, title, lines, "Back to me", OpenMeMenu);
+        OpenReadOnlyMenu(player, title, lines, "Back", OpenMeMenu);
     }
 
     private void OpenReadOnlyMenu(CCSPlayerController player, string title, IEnumerable<string> lines, string backLabel, Action<CCSPlayerController> backAction)
@@ -2753,29 +2755,21 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             lineList.Add("Nothing to show yet.");
         }
 
-        OpenReadOnlyMenuPage(player, title, lineList, backLabel, backAction, 0);
-    }
+        var menu = CreateMenu(title);
+        menu.PaginateBodyWithMenu = true;
+        menu.BodyLinesPerPage = ReadOnlyLinesPerPage;
+        menu.BodyLines.AddRange(lineList);
 
-    private void OpenReadOnlyMenuPage(CCSPlayerController player, string title, IReadOnlyList<string> lines, string backLabel, Action<CCSPlayerController> backAction, int page)
-    {
-        var totalPages = Math.Max(1, (int)Math.Ceiling(lines.Count / (double)ReadOnlyLinesPerPage));
-        var currentPage = Math.Clamp(page, 0, totalPages - 1);
-        var pageLines = lines.Skip(currentPage * ReadOnlyLinesPerPage).Take(ReadOnlyLinesPerPage).ToList();
-
-        var menu = CreateMenu(totalPages > 1 ? $"{title} ({currentPage + 1}/{totalPages})" : title);
-        menu.BodyLines.AddRange(pageLines);
-
-        if (currentPage > 0)
+        var totalPages = Math.Max(1, (int)Math.Ceiling(lineList.Count / (double)ReadOnlyLinesPerPage));
+        for (var pageIndex = 0; pageIndex < totalPages; pageIndex++)
         {
-            menu.AddMenuOption("Previous page", (target, _) => OpenReadOnlyMenuPage(target, title, lines, backLabel, backAction, currentPage - 1));
+            menu.AddMenuOption(backLabel, (target, _) => backAction(target));
+            for (var fillerIndex = 1; fillerIndex < menu.ItemsPerPage; fillerIndex++)
+            {
+                menu.AddMenuOption(string.Empty, static (_, _) => { }, disabled: true);
+            }
         }
 
-        if (currentPage + 1 < totalPages)
-        {
-            menu.AddMenuOption("Next page", (target, _) => OpenReadOnlyMenuPage(target, title, lines, backLabel, backAction, currentPage + 1));
-        }
-
-        menu.AddMenuOption(backLabel, (target, _) => backAction(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -3285,7 +3279,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         return new XPXNumberMenu(title, this)
         {
             ExitButton = true,
-            ItemsPerPage = 5,
+            ItemsPerPage = 4,
             TitleColor = "gold",
             BodyColor = "silver",
             EnabledColor = "white",

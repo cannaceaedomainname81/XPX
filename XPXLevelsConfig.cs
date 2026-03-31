@@ -99,8 +99,7 @@ public sealed class XPXLevelsConfig : BasePluginConfig
     [
         new() { Key = "shop_xp_small", Name = "Small XP Cache", Description = "Instantly grants 250 XP", RewardType = ShopRewardType.Xp, RewardAmount = 250, CostCredits = 30 },
         new() { Key = "shop_xp_big", Name = "Large XP Cache", Description = "Instantly grants 1000 XP", RewardType = ShopRewardType.Xp, RewardAmount = 1000, CostCredits = 95 },
-        new() { Key = "shop_crate_token", Name = "Crate Token", Description = "Adds one XPX crate token", RewardType = ShopRewardType.CrateToken, RewardAmount = 1, CostCredits = 45 },
-        new() { Key = "shop_credits_bundle", Name = "Credit Bundle", Description = "Instantly grants 25 credits", RewardType = ShopRewardType.Credits, RewardAmount = 25, CostCredits = 40 }
+        new() { Key = "shop_crate_token", Name = "Crate Token", Description = "Adds one XPX crate token", RewardType = ShopRewardType.CrateToken, RewardAmount = 1, CostCredits = 45 }
     ];
 
     [JsonPropertyName("Crates")] public List<CrateDefinition> Crates { get; set; } =

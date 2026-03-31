@@ -9,15 +9,14 @@ This guide explains how to build, install, and run XPX on a CS2 dedicated server
 - .NET 8 SDK on the development machine
 - access to the server files
 
-## Access Model
+## Install Package
 
-XPX should be treated as a manual ZIP install unless the maintainer explicitly gives source access.
+XPX is intended to be installed from a provided plugin ZIP package.
 
-Important:
+Use either:
 
-- users cannot clone a private repository without access
-- users also cannot download private release assets without access
-- in that case, the maintainer must share a ZIP package directly
+- a release ZIP if you have access to the release page
+- or a plugin ZIP shared directly by the maintainer
 
 Recommended package name:
 
@@ -56,6 +55,23 @@ At minimum, the server needs:
 - `XPXLevels.dll`
 - dependency DLLs from the build output
 - runtime support files copied with the build output
+
+## Customize XPX
+
+After the first server start, edit this live config file:
+
+```text
+game\csgo\addons\counterstrikesharp\configs\plugins\XPXLevels\XPXLevels.json
+```
+
+The most common tweaks are:
+
+- `Rewards` for tags and knife unlocks
+- `BaseXpToLevel`, `XpLinearGrowthPerLevel`, `XpQuadraticGrowthPerLevel` for the level curve
+- kill reward values such as `CasualCompetitiveKillXp`, `FastModeKillXp`, `KnifeKillBonusXp`, and `HeadshotBonusXp`
+- `WelcomeMessages` for the join/onboarding text
+
+For a more complete field list, see [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Menu Keybinds
 

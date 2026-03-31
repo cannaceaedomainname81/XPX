@@ -65,6 +65,7 @@ See [LICENSE.md](LICENSE.md) for the full notice.
 ### Player systems
 
 - `!me`, `!rank`, `!level`, `!top`
+- `!rewards` to view the full level reward ladder
 - `!stats` with K/D, HS%, playtime, favorite weapon, streaks, and economy state
 - `!missions` for daily and weekly mission progress
 - `!achievements` for permanent badge unlocks
@@ -107,9 +108,7 @@ NuGet packages used by this project:
 
 ### Manual install from a ZIP
 
-If you do not have repository access, you cannot clone a private repo directly.
-
-Use one of these instead:
+Use one of these:
 
 1. download a provided release ZIP if you have access to the release page
 2. or get a plugin ZIP directly from the maintainer
@@ -153,6 +152,23 @@ Typical local connect:
 connect 127.0.0.1:27015
 ```
 
+## Customize XPX
+
+After the first server start, open this file:
+
+```text
+game\csgo\addons\counterstrikesharp\configs\plugins\XPXLevels\XPXLevels.json
+```
+
+Most common edits:
+
+- `Rewards`: change tags and knife unlocks
+- `BaseXpToLevel`, `XpLinearGrowthPerLevel`, `XpQuadraticGrowthPerLevel`: tune the XP curve
+- `CasualCompetitiveKillXp`, `FastModeKillXp`, `KnifeKillBonusXp`, `HeadshotBonusXp`: tune combat rewards
+- `WelcomeMessages`: change the join text players see
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the quick field guide.
+
 ## Menu Keybinds
 
 Use `!bindmenu` in chat first. XPX will try to bind the menu keys locally.
@@ -190,6 +206,7 @@ If you do not bind the keys, XPX still supports chat fallback with `!1` through 
 - `!me`
 - `!help`
 - `!commands`
+- `!rewards`
 - `!level`
 - `!rank`
 - `!top`

@@ -95,7 +95,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     private bool _notificationsEnabled = true;
 
     public override string ModuleName => "XPX Levels";
-    public override string ModuleVersion => "1.4.2";
+    public override string ModuleVersion => "1.4.3";
     public override string ModuleAuthor => "OpenAI";
     public override string ModuleDescription => "Levels, XP rewards, RTV, and admin tools for XPX CS2.";
 
@@ -502,6 +502,18 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         }
 
         OpenCommandsMenu(player!);
+    }
+
+    [ConsoleCommand("css_rewards", "Show the XPX reward ladder")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnRewardsCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (!IsRealPlayer(player))
+        {
+            return;
+        }
+
+        OpenRewardsMenu(player!);
     }
 
     [ConsoleCommand("css_gamble", "Gamble a chunk of your XP")]
@@ -1174,6 +1186,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         menu.AddMenuOption("Stats", (_, _) => OpenStatsMenu(player));
         menu.AddMenuOption("Missions", (_, _) => OpenMissionsMenu(player));
         menu.AddMenuOption("Achievements", (_, _) => OpenAchievementsMenu(player));
+        menu.AddMenuOption("Rewards", (_, _) => OpenRewardsMenu(player, OpenMeMenu));
         menu.AddMenuOption("Shop", (_, _) => OpenShopMenu(player));
         menu.AddMenuOption("Wallet", (_, _) => OpenWalletMenu(player));
         menu.AddMenuOption("Inventory", (_, _) => OpenInventoryMenu(player));
@@ -2550,6 +2563,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         menu.AddMenuOption("Getting started", (_, _) => OpenHelpGettingStartedMenu(player));
         menu.AddMenuOption("Commands", (_, _) => OpenCommandsMenu(player));
         menu.AddMenuOption("Progression", (_, _) => OpenHelpProgressionMenu(player));
+        menu.AddMenuOption("Rewards", (_, _) => OpenRewardsMenu(player));
         menu.AddMenuOption("Economy", (_, _) => OpenHelpEconomyMenu(player));
         menu.AddMenuOption("Menus & voting", (_, _) => OpenHelpMenusMenu(player));
         if (!autoOpened)
@@ -2564,11 +2578,11 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     {
         var lines = new[]
         {
-            $"Current mode: {GetCurrentXpModeLabel()}",
-            "Use !me for your player hub.",
-            "Use !rank for level, tag, and next reward.",
-            "Earn XP from kills, wins, objectives, and bonuses.",
-            "Missions and achievements also reward progress.",
+            $"Mode: {GetCurrentXpModeLabel()}",
+            "Open !me for your hub.",
+            "Use !rank for your status.",
+            "Use !rewards for unlocks.",
+            "Earn XP from kills and wins.",
             "Warmup gives no XP."
         };
 
@@ -2579,12 +2593,15 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     {
         var lines = new[]
         {
-            "Core: !me | !help | !commands",
-            "Progress: !level | !rank | !top | !stats",
-            "Goals: !missions | !achievements",
-            $"Economy: !shop | !wallet | !inventory | !gamble <xp>",
-            "Maps: !rtv | !vote",
-            "Menus: !bindmenu or !1-!9 while open"
+            "Core: !me | !help",
+            "Info: !commands | !rewards",
+            "XP: !level | !rank | !top",
+            "Track: !stats | !missions",
+            "Goals: !achievements",
+            $"Economy: !shop | !wallet",
+            "More: !inventory | !gamble",
+            "Vote: !rtv | !vote",
+            "Menus: !bindmenu or !1-!9"
         };
 
         OpenReadOnlyMenu(player, "Commands", lines, "Back", target => OpenHelpMenu(target));
@@ -2594,31 +2611,52 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     {
         var lines = new[]
         {
-            $"Level cap: {Config.MaxLevel}",
-            "Use !rank and !level to track progress.",
-            "Use !top to compare yourself to others.",
-            "Daily and weekly missions grant XP and Credits.",
-            "Achievements grant badges and Credits.",
-            "Tags and knife rewards unlock at milestone levels."
+            $"Cap: LVL {Config.MaxLevel}",
+            "Use !rank for your status.",
+            "Use !level for XP progress.",
+            "Use !rewards for unlocks.",
+            "Use !top for the ladder.",
+            "Tags + knives unlock later."
         };
 
         OpenReadOnlyMenu(player, "Help | Progression", lines, "Back", target => OpenHelpMenu(target));
     }
 
+    private void OpenRewardsMenu(CCSPlayerController player)
+    {
+        OpenRewardsMenu(player, target => OpenHelpMenu(target));
+    }
+
+    private void OpenRewardsMenu(CCSPlayerController player, Action<CCSPlayerController> backAction)
+    {
+        var rewards = Config.Rewards
+            .OrderBy(reward => reward.Level)
+            .ToList();
+
+        if (rewards.Count == 0)
+        {
+            OpenReadOnlyMenu(player, "Rewards", new[] { "No rewards configured yet." }, "Back", backAction);
+            return;
+        }
+
+        var lines = rewards
+            .Select(reward => $"Level {reward.Level}: {DescribeReward(reward)}")
+            .ToList();
+        lines.Add($"Cap: LVL {Config.MaxLevel}");
+
+        OpenReadOnlyMenu(player, "Rewards", lines, "Back", backAction);
+    }
+
     private void OpenHelpEconomyMenu(CCSPlayerController player)
     {
-        var progress = EnsurePlayerProgress(player);
-        var credits = progress?.Credits ?? 0;
-        var tokens = progress?.CrateTokens ?? 0;
         var lines = new[]
         {
-            $"Current {Config.CurrencyName}: {credits}",
-            $"Crate tokens: {tokens}",
-            "Use !shop to buy XPX items and case tokens.",
-            "Open crates from the shop for rarity-based drops.",
-            "Bonuses, missions, and achievements feed your economy.",
-            "Better drops can grant temporary XP boosts.",
-            "Use !wallet to see your balance and totals."
+            $"Spend {Config.CurrencyName} in !shop.",
+            "Cases are opened in !shop.",
+            "Use !wallet for balance.",
+            "Use !inventory for boosts.",
+            "Boosts raise your earned XP.",
+            "Missions also pay Credits."
         };
 
         OpenReadOnlyMenu(player, "Help | Economy", lines, "Back", target => OpenHelpMenu(target));
@@ -2628,12 +2666,12 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     {
         var lines = new[]
         {
-            "Use 1-6 to select menu items on the page.",
-            "Use 7 for Prev, or Back on page 1.",
-            "Use 8 for next page when available.",
-            "Use 9 to close any XPX menu.",
-            "Use !bindmenu for local 1-9 binds.",
-            "If you do not bind keys, !1-!9 in chat still works."
+            "Use 1-6 to choose.",
+            "Use 7 for Back or Prev.",
+            "Use 8 for Next.",
+            "Use 9 to Close.",
+            "Run !bindmenu for binds.",
+            "Chat !1-!9 also works."
         };
 
         OpenReadOnlyMenu(player, "Help | Menus", lines, "Back", target => OpenHelpMenu(target));
@@ -2719,13 +2757,12 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             "<b><font color='gold'>XPX Help</font></b>",
             $"<font color='white'>Current mode:</font> <font color='gold'>{currentMode}</font>",
             $"<font color='white'>Level cap:</font> <font color='gold'>{Config.MaxLevel}</font>",
-            $"<font color='white'>Your tag:</font> <font color='gold'>{tag}</font>",
             "<font color='white'>How to play:</font> <font color='gold'>Get kills, win rounds, do objectives, and finish missions to earn XP and credits.</font>",
             "<font color='white'>Warmup:</font> <font color='gold'>No XP is awarded during warmup.</font>",
-            "<font color='white'>Start here:</font> <font color='gold'>!me !help !commands !level !rank !top !stats</font>",
+            "<font color='white'>Start here:</font> <font color='gold'>!me !help !commands !level !rank !rewards</font>",
             "<font color='white'>Goals:</font> <font color='gold'>!missions !achievements</font>",
             $"<font color='white'>Economy:</font> <font color='gold'>Earn {Config.CurrencyName} from missions, achievements, streaks, and bonuses, then spend them in !shop.</font>",
-            "<font color='white'>Other commands:</font> <font color='gold'>!wallet !rtv !vote !gamble &lt;xp&gt;</font>",
+            "<font color='white'>Other commands:</font> <font color='gold'>!stats !wallet !inventory !rtv !vote !gamble &lt;xp&gt;</font>",
             "<font color='white'>Progression:</font> <font color='gold'>Level to 500 and unlock permanent tags plus knife rewards.</font>",
             $"<font color='white'>Next reward:</font> <font color='gold'>{nextRewardText}</font>",
             "<font color='white'>Menu input:</font> <font color='gold'>Use !bindmenu for 1-9 keys, or type !1-!9 in chat while a menu is open</font>",

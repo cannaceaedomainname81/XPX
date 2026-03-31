@@ -4,6 +4,21 @@ XPX reads its live settings from `XPXLevels.json`.
 
 This document explains the main config sections and what they do.
 
+## Quick Customization
+
+The live file to edit on the server is:
+
+```text
+game\csgo\addons\counterstrikesharp\configs\plugins\XPXLevels\XPXLevels.json
+```
+
+If you only want the common edits, start here:
+
+- `Rewards` to change tags and knife unlocks
+- `BaseXpToLevel`, `XpLinearGrowthPerLevel`, `XpQuadraticGrowthPerLevel` to rebalance progression
+- `CasualCompetitiveKillXp`, `FastModeKillXp`, `KnifeKillBonusXp`, `HeadshotBonusXp` to tune combat XP
+- `WelcomeMessages` to change the join text and onboarding hints
+
 ## Basic Settings
 
 Core progression keys:

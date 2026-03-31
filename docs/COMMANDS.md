@@ -14,6 +14,7 @@ In general:
 | `!me` | `css_me` | Opens the main player hub |
 | `!help` | `css_help` | Opens the help menu |
 | `!commands` | `css_commands` | Opens the command reference |
+| `!rewards` | `css_rewards` | Opens the level reward ladder |
 | `!level` | `css_level` | Shows your level overview |
 | `!rank` | `css_rank` | Shows your current rank |
 | `!top` | `css_top` | Shows the top players |

@@ -1,9 +1,10 @@
 # Screenshot Placeholders
 
-Drop future README screenshots in this folder.
+README screenshots and banner assets live in this folder.
 
 Suggested filenames:
 
+- `header-cs2-xpx.png`
 - `player-hub.png`
 - `admin-menu.png`
 - `shop-crates.png`
@@ -21,3 +22,16 @@ Recommended captures:
 - help / commands page
 - stats page
 - mission progress page
+
+Current repo screenshots:
+
+- `header-cs2-xpx.png`
+- `me.png`
+- `admin-page-1.png`
+- `admin-page-3.png`
+- `shop.png`
+- `help.png`
+- `missions.png`
+- `crate-reward.png`
+- `level-up.png`
+- `chat-text.png`

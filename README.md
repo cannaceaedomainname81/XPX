@@ -10,6 +10,8 @@
 ![License](https://img.shields.io/badge/License-Proprietary-red)
 ![Last Commit](https://img.shields.io/github/last-commit/Azuyah/XPX)
 
+![CS2 XPX Banner](docs/screenshots/header-cs2-xpx.png)
+
 XPX is a CounterStrikeSharp plugin for Counter-Strike 2 that adds a full server-side progression layer:
 
 - level and XP progression up to level `500`
@@ -37,14 +39,11 @@ See [LICENSE.md](LICENSE.md) for the full notice.
 
 | Player Hub | Admin Menu | Shop / Crates |
 | --- | --- | --- |
-| Screenshot placeholder: `docs/screenshots/player-hub.png` | Screenshot placeholder: `docs/screenshots/admin-menu.png` | Screenshot placeholder: `docs/screenshots/shop-crates.png` |
+| ![Player Hub](docs/screenshots/me.png) | ![Admin Menu](docs/screenshots/admin-page-1.png) | ![Shop](docs/screenshots/shop.png) |
 
-Additional recommended captures:
-
-- `docs/screenshots/help-menu.png`
-- `docs/screenshots/stats-menu.png`
-- `docs/screenshots/crate-result.png`
-- `docs/screenshots/mission-progress.png`
+| Help | Missions | Crate Reward |
+| --- | --- | --- |
+| ![Help](docs/screenshots/help.png) | ![Missions](docs/screenshots/missions.png) | ![Crate Reward](docs/screenshots/crate-reward.png) |
 
 ## What XPX Includes
 
@@ -95,22 +94,45 @@ NuGet packages used by this project:
 - `Dapper 2.1.72`
 - `Microsoft.Data.Sqlite 10.0.5`
 
-## Quick Start
+## Install Options
 
-### 1. Clone the repo
+### Option A: Clone the repo
+
+If you have repository access, clone it normally:
 
 ```powershell
 git clone https://github.com/Azuyah/XPX.git
 cd XPX
 ```
 
-### 2. Build the plugin
+### Option B: Manual install from a ZIP
+
+If you do not have repository access, you cannot clone a private repo directly.
+
+Use one of these instead:
+
+1. download a provided release ZIP
+2. get a plugin ZIP directly from the maintainer
+3. extract it locally
+4. copy the plugin files into your CS2 CounterStrikeSharp plugin folder
+
+Recommended current package name:
+
+```text
+XPX-v1.0.2-plugin.zip
+```
+
+See [docs/SETUP.md](docs/SETUP.md) for the manual install path.
+
+## Quick Start
+
+### 1. Build the plugin
 
 ```powershell
 dotnet build
 ```
 
-### 3. Deploy it
+### 2. Deploy it
 
 If your server layout matches the current local setup, use:
 
@@ -125,7 +147,7 @@ By default the deploy script targets:
 - config path: `R:\cs2-ds\game\csgo\addons\counterstrikesharp\configs\plugins\XPXLevels\XPXLevels.json`
 - data path: `R:\cs2-ds\game\csgo\addons\counterstrikesharp\data\XPXLevels`
 
-### 4. Join the server
+### 3. Join the server
 
 Typical local connect:
 

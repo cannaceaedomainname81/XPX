@@ -9,6 +9,30 @@ This guide explains how to build, install, and run XPX on a CS2 dedicated server
 - .NET 8 SDK on the development machine
 - access to the server files
 
+## Access Models
+
+There are two realistic ways to install XPX:
+
+### 1. Repo access
+
+Use this if you can clone the repository directly.
+
+### 2. Manual ZIP install
+
+Use this if you do not have repository access.
+
+Important:
+
+- users cannot clone a private repository without access
+- users also cannot download private release assets without access
+- in that case, the maintainer must share a ZIP package directly
+
+Recommended package name:
+
+```text
+XPX-v1.0.2-plugin.zip
+```
+
 ## Project Build
 
 From the repo root:
@@ -22,6 +46,24 @@ Expected output:
 ```text
 bin\Debug\net8.0\XPXLevels.dll
 ```
+
+## Manual ZIP Install
+
+If you received a built ZIP package instead of source access:
+
+1. extract the ZIP locally
+2. locate the built plugin output files
+3. copy them into:
+   `game\csgo\addons\counterstrikesharp\plugins\XPXLevels`
+4. start the server once so XPX can generate its config if needed
+5. edit `XPXLevels.json`
+6. restart the server
+
+At minimum, the server needs:
+
+- `XPXLevels.dll`
+- dependency DLLs from the build output
+- runtime support files copied with the build output
 
 ## Deploy Script
 

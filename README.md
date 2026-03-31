@@ -242,6 +242,46 @@ If you do not bind the keys, XPX still supports chat fallback with `!1` through 
 
 For the complete command reference, see [docs/COMMANDS.md](docs/COMMANDS.md).
 
+## Admin Setup
+
+To use `!admin` and the XPX admin commands, add yourself to CounterStrikeSharp's admin config.
+
+Edit these files on the server:
+
+```text
+game\csgo\addons\counterstrikesharp\configs\admins.json
+game\csgo\addons\counterstrikesharp\configs\admin_groups.json
+```
+
+Example `admins.json` entry:
+
+```json
+{
+  "YourName": {
+    "identity": "76561198000000000",
+    "groups": [
+      "#XPX/admin"
+    ]
+  }
+}
+```
+
+Example `admin_groups.json` entry:
+
+```json
+{
+  "#XPX/admin": {
+    "flags": [
+      "@css/root",
+      "@XPX/root"
+    ],
+    "immunity": 999
+  }
+}
+```
+
+Replace the example SteamID with your own SteamID64, then restart the server.
+
 ## Configuration
 
 XPX is driven by `XPXLevels.json`. The config covers:

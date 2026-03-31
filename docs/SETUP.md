@@ -170,6 +170,40 @@ After deployment:
 
 XPX uses CounterStrikeSharp permissions. Make sure your SteamID is configured in your server admin files and granted the XPX admin groups used by the plugin.
 
+Files to edit:
+
+```text
+game\csgo\addons\counterstrikesharp\configs\admins.json
+game\csgo\addons\counterstrikesharp\configs\admin_groups.json
+```
+
+Example:
+
+```json
+{
+  "YourName": {
+    "identity": "76561198000000000",
+    "groups": [
+      "#XPX/admin"
+    ]
+  }
+}
+```
+
+```json
+{
+  "#XPX/admin": {
+    "flags": [
+      "@css/root",
+      "@XPX/root"
+    ],
+    "immunity": 999
+  }
+}
+```
+
+Replace the example SteamID with your own SteamID64, save both files, and restart the server.
+
 The project has historically used these permission groups:
 
 - `@XPX/root`

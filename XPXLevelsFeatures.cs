@@ -538,7 +538,10 @@ public sealed partial class XPXLevelsPlugin
             return;
         }
 
-        Reply(player, "{Green}Bonus unlocked: {White}" + label + "{Green} +" + xp + " XP +" + credits + " " + Config.CurrencyName);
+        if (_notificationsEnabled)
+        {
+            Reply(player, "{Green}Bonus unlocked: {White}" + label + "{Green} +" + xp + " XP +" + credits + " " + Config.CurrencyName);
+        }
     }
 
     private bool AdjustCredits(CCSPlayerController player, int delta, string reason, bool showMessage)
@@ -616,9 +619,12 @@ public sealed partial class XPXLevelsPlugin
             AdjustCredits(player, mission.RewardCredits, mission.Title, false);
         }
 
-        Reply(player,
-            "{Gold}Mission complete: {White}" + mission.Title +
-            "{Gold}. Rewards: {White}" + mission.RewardXp + "{Gold} XP, {White}" + mission.RewardCredits + "{Gold} " + Config.CurrencyName + ".");
+        if (_notificationsEnabled)
+        {
+            Reply(player,
+                "{Gold}Mission complete: {White}" + mission.Title +
+                "{Gold}. Rewards: {White}" + mission.RewardXp + "{Gold} XP, {White}" + mission.RewardCredits + "{Gold} " + Config.CurrencyName + ".");
+        }
     }
 
     private void EvaluateAchievements(CCSPlayerController player)
@@ -661,9 +667,12 @@ public sealed partial class XPXLevelsPlugin
                 AdjustCredits(player, achievement.RewardCredits, achievement.Title, false);
             }
 
-            Reply(player,
-                "{Gold}Achievement unlocked: {White}" + achievement.Title +
-                "{Gold} [" + achievement.Badge + "] +" + achievement.RewardCredits + " " + Config.CurrencyName);
+            if (_notificationsEnabled)
+            {
+                Reply(player,
+                    "{Gold}Achievement unlocked: {White}" + achievement.Title +
+                    "{Gold} [" + achievement.Badge + "] +" + achievement.RewardCredits + " " + Config.CurrencyName);
+            }
         }
     }
 
@@ -947,6 +956,8 @@ public sealed partial class XPXLevelsPlugin
         }
 
         var menu = CreateMenu($"Shop | {progress.Credits} {Config.CurrencyName}");
+        menu.ItemsPerPage = 3;
+        ConfigureBackSlot(menu, OpenMeMenu);
         menu.BodyLines.Add($"{Config.CurrencyName}: {progress.Credits} | Tokens: {progress.CrateTokens}");
         menu.BodyLines.Add($"Active XP boost: {GetActiveXpBoostLabel(progress)}");
 
@@ -962,13 +973,13 @@ public sealed partial class XPXLevelsPlugin
             }, disabled: !affordable);
         }
 
-        menu.AddMenuOption("Back", (target, _) => OpenMeMenu(target));
         OpenXPXMenu(player, menu);
     }
 
     private void OpenSpecialRoundsMenu(CCSPlayerController player)
     {
         var menu = CreateMenu("Special Rounds");
+        ConfigureBackSlot(menu, OpenAdminMenu);
         menu.AddMenuOption("Queue knife round", (_, _) => QueueSpecialRound(SpecialRoundType.Knife, player.PlayerName));
         menu.AddMenuOption("Queue pistol round", (_, _) => QueueSpecialRound(SpecialRoundType.Pistol, player.PlayerName));
         menu.AddMenuOption("Random warmup event", (_, _) =>
@@ -992,7 +1003,6 @@ public sealed partial class XPXLevelsPlugin
             _warmupEvent = WarmupEventType.ScoutsOnly;
             ReapplyLoadoutsForAlivePlayers();
         });
-        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1006,6 +1016,8 @@ public sealed partial class XPXLevelsPlugin
         }
 
         var menu = CreateMenu($"Crates | {progress.CrateTokens} tokens");
+        menu.ItemsPerPage = 3;
+        ConfigureBackSlot(menu, OpenShopMenu);
         menu.BodyLines.Add($"{Config.CurrencyName}: {progress.Credits} | Tokens: {progress.CrateTokens}");
         menu.BodyLines.Add($"Active XP boost: {GetActiveXpBoostLabel(progress)}");
         menu.AddMenuOption($"Open {crate.Name}", (_, _) => OpenCrate(player), disabled: progress.CrateTokens <= 0);
@@ -1014,7 +1026,6 @@ public sealed partial class XPXLevelsPlugin
             PurchaseCrateToken(player, crate);
         }, disabled: progress.Credits < crate.CostCredits);
         menu.AddMenuOption("View drop table", (target, _) => OpenCrateDropTableMenu(target, crate));
-        menu.AddMenuOption("Back", (target, _) => OpenShopMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1159,6 +1170,8 @@ public sealed partial class XPXLevelsPlugin
     private void OpenCrateResultMenu(CCSPlayerController player, CrateDefinition crate, CrateRewardDefinition reward, string rewardSummary, PlayerProgress progress)
     {
         var menu = CreateMenu($"{reward.Rarity} Reward");
+        menu.ItemsPerPage = 3;
+        ConfigureBackSlot(menu, OpenCrateMenu);
         menu.TitleColor = GetCrateRarityColor(reward.Rarity);
         menu.BodyColor = "white";
         menu.BodyLines.Add($"Drop: {reward.Label}");
@@ -1170,7 +1183,6 @@ public sealed partial class XPXLevelsPlugin
             menu.AddMenuOption($"Open {crate.Name} again", (_, _) => OpenCrate(player));
         }
 
-        menu.AddMenuOption("Back", (target, _) => OpenCrateMenu(target));
         menu.AddMenuOption("Shop", (target, _) => OpenShopMenu(target));
         OpenXPXMenu(player, menu);
     }

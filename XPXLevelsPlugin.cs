@@ -30,7 +30,8 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     }
 
     private const int DefaultBotCount = 10;
-    private const int ReadOnlyLinesPerPage = 3;
+    private const int ReadOnlyLinesPerPage = 4;
+    private const int ReadOnlyWrapWidth = 28;
     private const float TransientPanelDurationSeconds = 6.0f;
     private const int TransitionSnapshotLifetimeMinutes = 10;
     private const string PermissionRoot = "@XPX/root";
@@ -91,6 +92,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     private GameTimer? _activeMapVoteReminderTimer;
     private GameTimer? _autosaveTimer;
     private string? _transitionSnapshotPath;
+    private bool _notificationsEnabled = true;
 
     public override string ModuleName => "XPX Levels";
     public override string ModuleVersion => "1.4.2";
@@ -848,6 +850,11 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
 
     private HookResult OnAnyCommandPre(CCSPlayerController? player, CommandInfo command)
     {
+        if (IsRealPlayer(player) && TryHandleMenuSpecialKeySelection(player!, command))
+        {
+            return HookResult.Handled;
+        }
+
         if (IsRealPlayer(player) && TryHandleMenuChatSelection(player!, command))
         {
             return HookResult.Handled;
@@ -1114,10 +1121,10 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         if (HasPermission(player, PermissionMap))
         {
             menu.AddMenuOption("Change map", (admin, _) => OpenChangeMapMenu(admin));
-            menu.AddMenuOption("Restart current map", (admin, _) => RestartCurrentMap(admin.PlayerName));
+            menu.AddMenuOption("Restart map", (admin, _) => RestartCurrentMap(admin.PlayerName));
             menu.AddMenuOption("Change game mode", (admin, _) => OpenGameModeMenu(admin));
             menu.AddMenuOption("Special rounds", (admin, _) => OpenSpecialRoundsMenu(admin));
-            menu.AddMenuOption($"XPX loadout mode ({GetForcedLoadoutStatusLabel()})", (admin, _) => OpenForcedLoadoutMenu(admin));
+            menu.AddMenuOption($"Loadout ({GetForcedLoadoutStatusLabel()})", (admin, _) => OpenForcedLoadoutMenu(admin));
         }
 
         if (HasPermission(player, PermissionKick))
@@ -1133,6 +1140,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             menu.AddMenuOption("Remove XP", (admin, _) => OpenXpAmountMenu(admin, false));
             menu.AddMenuOption("Give credits", (admin, _) => OpenCreditsAmountMenu(admin, true));
             menu.AddMenuOption("Remove credits", (admin, _) => OpenCreditsAmountMenu(admin, false));
+            menu.AddMenuOption($"Notifications: {(_notificationsEnabled ? "On" : "Off")}", (admin, _) => ToggleNotifications(admin));
         }
 
         if (HasPermission(player, PermissionVote))
@@ -1160,7 +1168,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         var tag = GetCurrentVisibleTag(progress);
         var menu = CreateMenu($"Me | {RenderShortLevelLabel(state.Level)} | {(string.IsNullOrWhiteSpace(tag) ? "NO TAG" : tag)}");
 
-        menu.AddMenuOption("My level overview", (_, _) => OpenLevelOverviewMenu(player));
+        menu.AddMenuOption("Level overview", (_, _) => OpenLevelOverviewMenu(player));
         menu.AddMenuOption("My rank", (_, _) => OpenRankOverviewMenu(player));
         menu.AddMenuOption("Top players", (_, _) => OpenTopOverviewMenu(player));
         menu.AddMenuOption("Stats", (_, _) => OpenStatsMenu(player));
@@ -1196,6 +1204,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     {
         var maps = GetAvailableMaps();
         var menu = CreateMenu("Change Map");
+        ConfigureBackSlot(menu, OpenAdminMenu);
         foreach (var map in maps)
         {
             var selectedMap = map;
@@ -1205,8 +1214,6 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
                 ChangeMapTo(selectedMap.Key, admin.PlayerName);
             });
         }
-
-        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
@@ -1221,7 +1228,8 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     private void OpenGameModeMenu(CCSPlayerController player)
     {
         var menu = CreateMenu("Change Game Mode");
-        menu.AddMenuOption($"XPX loadout mode ({GetForcedLoadoutStatusLabel()})", (admin, _) => OpenForcedLoadoutMenu(admin));
+        ConfigureBackSlot(menu, OpenAdminMenu);
+        menu.AddMenuOption($"Loadout ({GetForcedLoadoutStatusLabel()})", (admin, _) => OpenForcedLoadoutMenu(admin));
         foreach (var mode in Config.GameModes)
         {
             var selectedMode = mode;
@@ -1230,29 +1238,27 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
                 ApplyGameMode(selectedMode, player.PlayerName);
             });
         }
-
-        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
     private void OpenForcedLoadoutMenu(CCSPlayerController player)
     {
         var menu = CreateMenu("Weapon Loadout");
-        menu.AddMenuOption("Rifles for all players", (admin, _) => EnableForcedLoadoutMode(ForcedLoadoutType.Rifle, admin.PlayerName, actor: admin));
-        menu.AddMenuOption("Pistols for all players", (admin, _) => EnableForcedLoadoutMode(ForcedLoadoutType.Pistol, admin.PlayerName, actor: admin));
-        menu.AddMenuOption("Knives for all players", (admin, _) => EnableForcedLoadoutMode(ForcedLoadoutType.Knife, admin.PlayerName, actor: admin));
+        ConfigureBackSlot(menu, OpenAdminMenu);
+        menu.AddMenuOption("Rifles for all", (admin, _) => EnableForcedLoadoutMode(ForcedLoadoutType.Rifle, admin.PlayerName, actor: admin));
+        menu.AddMenuOption("Pistols for all", (admin, _) => EnableForcedLoadoutMode(ForcedLoadoutType.Pistol, admin.PlayerName, actor: admin));
+        menu.AddMenuOption("Knives for all", (admin, _) => EnableForcedLoadoutMode(ForcedLoadoutType.Knife, admin.PlayerName, actor: admin));
         if (_forcedLoadoutModeEnabled)
         {
-            menu.AddMenuOption("Disable forced loadout", (admin, _) => DisableForcedLoadoutMode(admin.PlayerName, actor: admin));
+            menu.AddMenuOption("Disable loadout", (admin, _) => DisableForcedLoadoutMode(admin.PlayerName, actor: admin));
         }
-
-        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
     private void OpenKickMenu(CCSPlayerController player)
     {
         var menu = CreateMenu("Kick Player");
+        ConfigureBackSlot(menu, OpenAdminMenu);
         foreach (var target in GetHumanPlayers().Where(target => target != player && AdminManager.CanPlayerTarget(player, target)))
         {
             var selectedTarget = target;
@@ -1261,14 +1267,13 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
                 KickPlayer(selectedTarget, player.PlayerName);
             });
         }
-
-        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
     private void OpenXpAmountMenu(CCSPlayerController player, bool add)
     {
         var menu = CreateMenu(add ? "Give XP" : "Remove XP");
+        ConfigureBackSlot(menu, OpenAdminMenu);
         foreach (var amount in Config.AdminXpAmounts)
         {
             var selectedAmount = amount;
@@ -1277,14 +1282,13 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
                 OpenXpTargetMenu(player, add, selectedAmount);
             });
         }
-
-        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
     private void OpenXpTargetMenu(CCSPlayerController player, bool add, int amount)
     {
         var menu = CreateMenu(add ? $"Give {amount:N0} XP" : $"Remove {amount:N0} XP");
+        ConfigureBackSlot(menu, target => OpenXpAmountMenu(target, add));
         foreach (var target in GetHumanPlayers().Where(target => AdminManager.CanPlayerTarget(player, target)))
         {
             var selectedTarget = target;
@@ -1303,14 +1307,13 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
                     selectedTarget.PlayerName + "{Default}.");
             });
         }
-
-        menu.AddMenuOption("Back", (target, _) => OpenXpAmountMenu(target, add));
         OpenXPXMenu(player, menu);
     }
 
     private void OpenCreditsAmountMenu(CCSPlayerController player, bool add)
     {
         var menu = CreateMenu(add ? "Give Credits" : "Remove Credits");
+        ConfigureBackSlot(menu, OpenAdminMenu);
         foreach (var amount in Config.AdminXpAmounts)
         {
             var selectedAmount = amount;
@@ -1319,14 +1322,13 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
                 OpenCreditsTargetMenu(player, add, selectedAmount);
             });
         }
-
-        menu.AddMenuOption("Back", (target, _) => OpenAdminMenu(target));
         OpenXPXMenu(player, menu);
     }
 
     private void OpenCreditsTargetMenu(CCSPlayerController player, bool add, int amount)
     {
         var menu = CreateMenu(add ? $"Give {amount:N0} Credits" : $"Remove {amount:N0} Credits");
+        ConfigureBackSlot(menu, target => OpenCreditsAmountMenu(target, add));
         foreach (var target in GetHumanPlayers().Where(target => AdminManager.CanPlayerTarget(player, target)))
         {
             var selectedTarget = target;
@@ -1345,8 +1347,6 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
                     selectedTarget.PlayerName + "{Default}.");
             });
         }
-
-        menu.AddMenuOption("Back", (target, _) => OpenCreditsAmountMenu(target, add));
         OpenXPXMenu(player, menu);
     }
 
@@ -2037,7 +2037,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         Logger.LogInformation("XPX saved {TotalXp} XP for {SteamId} after {Reason} (delta {Delta})", progress.TotalXp, progress.SteamId, reason, actualDelta);
 
         var newState = _levelCurve.GetState(progress.TotalXp);
-        if (showDeltaMessage)
+        if (showDeltaMessage && _notificationsEnabled)
         {
             var verb = actualDelta > 0 ? "gained" : "lost";
             var amount = Math.Abs(actualDelta).ToString("N0", CultureInfo.InvariantCulture);
@@ -2082,10 +2082,13 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             var nextReward = GetNextReward(newState.Level);
             var nextRewardText = nextReward is null ? string.Empty : "{Silver} Next: {White}" + DescribeReward(nextReward);
 
-            ShowLevelUpPanel(player, BuildLevelUpHtml(newState, unlockedRewards, nextReward), TransientPanelDurationSeconds);
-            Broadcast("{Gold}" + player.PlayerName + "{Default} reached level {White}" + newState.Level + "{Default}." + rewardText + nextRewardText);
+            if (_notificationsEnabled)
+            {
+                ShowLevelUpPanel(player, BuildLevelUpHtml(newState, unlockedRewards, nextReward), TransientPanelDurationSeconds);
+                Broadcast("{Gold}" + player.PlayerName + "{Default} reached level {White}" + newState.Level + "{Default}." + rewardText + nextRewardText);
+            }
         }
-        else
+        else if (_notificationsEnabled)
         {
             Reply(player, "{Yellow}Your level changed to {White}" + newState.Level + "{Yellow}.");
         }
@@ -2541,17 +2544,17 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     {
         var mode = GetCurrentXpModeLabel();
         var menu = CreateMenu(autoOpened
-            ? $"Welcome to XPX | {mode}"
-            : $"XPX Help | {mode}");
+            ? $"Welcome | {mode}"
+            : $"Help | {mode}");
 
         menu.AddMenuOption("Getting started", (_, _) => OpenHelpGettingStartedMenu(player));
         menu.AddMenuOption("Commands", (_, _) => OpenCommandsMenu(player));
-        menu.AddMenuOption("Progression & rewards", (_, _) => OpenHelpProgressionMenu(player));
-        menu.AddMenuOption("Economy & shop", (_, _) => OpenHelpEconomyMenu(player));
-        menu.AddMenuOption("Voting & menus", (_, _) => OpenHelpMenusMenu(player));
+        menu.AddMenuOption("Progression", (_, _) => OpenHelpProgressionMenu(player));
+        menu.AddMenuOption("Economy", (_, _) => OpenHelpEconomyMenu(player));
+        menu.AddMenuOption("Menus & voting", (_, _) => OpenHelpMenusMenu(player));
         if (!autoOpened)
         {
-            menu.AddMenuOption("Back", (target, _) => OpenMeMenu(target));
+            ConfigureBackSlot(menu, OpenMeMenu);
         }
 
         OpenXPXMenu(player, menu);
@@ -2562,9 +2565,11 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         var lines = new[]
         {
             $"Current mode: {GetCurrentXpModeLabel()}",
-            "Use !me for your player hub and !rank for your level, tag, and next reward.",
-            "Earn XP from kills, wins, objectives, streaks, missions, and achievements.",
-            $"Warmup gives no XP, so progression starts after warmup."
+            "Use !me for your player hub.",
+            "Use !rank for level, tag, and next reward.",
+            "Earn XP from kills, wins, objectives, and bonuses.",
+            "Missions and achievements also reward progress.",
+            "Warmup gives no XP."
         };
 
         OpenReadOnlyMenu(player, "Help | Getting Started", lines, "Back", target => OpenHelpMenu(target));
@@ -2579,7 +2584,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
             "Goals: !missions | !achievements",
             $"Economy: !shop | !wallet | !inventory | !gamble <xp>",
             "Maps: !rtv | !vote",
-            "Menus: !bindmenu or !1-!9 while a menu is open"
+            "Menus: !bindmenu or !1-!9 while open"
         };
 
         OpenReadOnlyMenu(player, "Commands", lines, "Back", target => OpenHelpMenu(target));
@@ -2590,9 +2595,10 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         var lines = new[]
         {
             $"Level cap: {Config.MaxLevel}",
-            "Use !rank, !level, and !top to track your current progress.",
+            "Use !rank and !level to track progress.",
+            "Use !top to compare yourself to others.",
             "Daily and weekly missions grant XP and Credits.",
-            "Achievements unlock permanent badges and Credits.",
+            "Achievements grant badges and Credits.",
             "Tags and knife rewards unlock at milestone levels."
         };
 
@@ -2608,10 +2614,10 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         {
             $"Current {Config.CurrencyName}: {credits}",
             $"Crate tokens: {tokens}",
-            "Use !shop to buy XPX rewards and crate tokens.",
-            "Open cases from inside the shop flow for rarity-based drops.",
+            "Use !shop to buy XPX items and case tokens.",
+            "Open crates from the shop for rarity-based drops.",
             "Bonuses, missions, and achievements feed your economy.",
-            "Rare and better case drops can grant temporary XP boosters.",
+            "Better drops can grant temporary XP boosts.",
             "Use !wallet to see your balance and totals."
         };
 
@@ -2623,7 +2629,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         var lines = new[]
         {
             "Use 1-6 to select menu items on the page.",
-            "Use 7 for previous page when available.",
+            "Use 7 for Prev, or Back on page 1.",
             "Use 8 for next page when available.",
             "Use 9 to close any XPX menu.",
             "Use !bindmenu for local 1-9 binds.",
@@ -2749,6 +2755,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     {
         var lineList = lines
             .Where(static line => !string.IsNullOrWhiteSpace(line))
+            .SelectMany(WrapMenuBodyLine)
             .ToList();
         if (lineList.Count == 0)
         {
@@ -2758,19 +2765,50 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         var menu = CreateMenu(title);
         menu.PaginateBodyWithMenu = true;
         menu.BodyLinesPerPage = ReadOnlyLinesPerPage;
+        menu.ItemsPerPage = 1;
+        menu.SlotSevenLabel = backLabel;
+        menu.SlotSevenAction = backAction;
         menu.BodyLines.AddRange(lineList);
 
         var totalPages = Math.Max(1, (int)Math.Ceiling(lineList.Count / (double)ReadOnlyLinesPerPage));
         for (var pageIndex = 0; pageIndex < totalPages; pageIndex++)
         {
-            menu.AddMenuOption(backLabel, (target, _) => backAction(target));
-            for (var fillerIndex = 1; fillerIndex < menu.ItemsPerPage; fillerIndex++)
-            {
-                menu.AddMenuOption(string.Empty, static (_, _) => { }, disabled: true);
-            }
+            menu.AddMenuOption(string.Empty, static (_, _) => { }, disabled: true);
         }
 
         OpenXPXMenu(player, menu);
+    }
+
+    private static IEnumerable<string> WrapMenuBodyLine(string line)
+    {
+        var text = line.Trim();
+        if (text.Length <= ReadOnlyWrapWidth)
+        {
+            yield return text;
+            yield break;
+        }
+
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var current = new List<string>();
+        var currentLength = 0;
+        foreach (var word in words)
+        {
+            var additionalLength = current.Count == 0 ? word.Length : word.Length + 1;
+            if (current.Count > 0 && currentLength + additionalLength > ReadOnlyWrapWidth)
+            {
+                yield return string.Join(' ', current);
+                current.Clear();
+                currentLength = 0;
+            }
+
+            current.Add(word);
+            currentLength += current.Count == 1 ? word.Length : additionalLength;
+        }
+
+        if (current.Count > 0)
+        {
+            yield return string.Join(' ', current);
+        }
     }
 
     private bool TryHandleMenuChatSelection(CCSPlayerController player, CommandInfo command)
@@ -2798,6 +2836,46 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
 
         MenuManager.OnKeyPress(player, key);
         return true;
+    }
+
+    private bool TryHandleMenuSpecialKeySelection(CCSPlayerController player, CommandInfo command)
+    {
+        if (MenuManager.GetActiveMenu(player) is not XPXNumberMenuInstance activeMenu ||
+            activeMenu.Menu is not XPXNumberMenu menu)
+        {
+            return false;
+        }
+
+        var key = ExtractMenuKey(command);
+        if (key != 7 || activeMenu.CanGoPrevPage || menu.SlotSevenAction is null)
+        {
+            return false;
+        }
+
+        menu.SlotSevenAction(player);
+        return true;
+    }
+
+    private static int? ExtractMenuKey(CommandInfo command)
+    {
+        var commandName = command.ArgCount > 0 ? command.GetArg(0)?.Trim() ?? string.Empty : string.Empty;
+        if (commandName.StartsWith("css_", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(commandName.AsSpan(4), NumberStyles.None, CultureInfo.InvariantCulture, out var cssKey) &&
+            cssKey is >= 1 and <= 9)
+        {
+            return cssKey;
+        }
+
+        var chatToken = ExtractChatToken(command);
+        if (chatToken.Length == 2 &&
+            (chatToken[0] == '!' || chatToken[0] == '/') &&
+            int.TryParse(chatToken[1].ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var chatKey) &&
+            chatKey is >= 1 and <= 9)
+        {
+            return chatKey;
+        }
+
+        return null;
     }
 
     private static string ExtractChatToken(CommandInfo command)
@@ -3280,6 +3358,7 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
         {
             ExitButton = true,
             ItemsPerPage = 4,
+            MaxOptionTextLength = 24,
             TitleColor = "gold",
             BodyColor = "silver",
             EnabledColor = "white",
@@ -3460,6 +3539,19 @@ public sealed partial class XPXLevelsPlugin : BasePlugin, IPluginConfig<XPXLevel
     private void Broadcast(string message)
     {
         Server.PrintToChatAll(FormatChat($"{Config.ChatPrefix} {message}"));
+    }
+
+    private void ConfigureBackSlot(XPXNumberMenu menu, Action<CCSPlayerController> backAction, string label = "Back")
+    {
+        menu.SlotSevenLabel = label;
+        menu.SlotSevenAction = backAction;
+    }
+
+    private void ToggleNotifications(CCSPlayerController admin)
+    {
+        _notificationsEnabled = !_notificationsEnabled;
+        Broadcast("{Gold}" + admin.PlayerName + "{Default} turned XPX notifications {White}" + (_notificationsEnabled ? "On" : "Off") + "{Default}.");
+        OpenAdminMenu(admin);
     }
 
     private string FormatChat(string message)

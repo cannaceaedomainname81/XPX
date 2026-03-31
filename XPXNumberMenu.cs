@@ -13,6 +13,9 @@ public sealed class XPXNumberMenu : BaseMenu
     public List<string> BodyLines { get; } = [];
     public int BodyLinesPerPage { get; set; } = 3;
     public bool PaginateBodyWithMenu { get; set; }
+    public string? SlotSevenLabel { get; set; }
+    public Action<CCSPlayerController>? SlotSevenAction { get; set; }
+    public int MaxOptionTextLength { get; set; } = 24;
     public string TitleColor { get; set; } = "gold";
     public string BodyColor { get; set; } = "silver";
     public string EnabledColor { get; set; } = "white";
@@ -50,6 +53,11 @@ public sealed class XPXNumberMenuInstance : BaseMenuInstance
 
     protected override int MenuItemsPerPage => NumPerPage;
 
+    public bool IsBodyPagedMenu => Menu is XPXNumberMenu { PaginateBodyWithMenu: true };
+    public bool CanGoPrevPage => HasPrevButton;
+    public bool CanGoNextPage => HasNextButton;
+    public int BodyPageIndex => MenuItemsPerPage <= 0 ? 0 : CurrentOffset / MenuItemsPerPage;
+
     public XPXNumberMenuInstance(BasePlugin plugin, CCSPlayerController player, IMenu menu) : base(player, menu)
     {
         _plugin = plugin;
@@ -84,11 +92,6 @@ public sealed class XPXNumberMenuInstance : BaseMenuInstance
                     builder.Append($"<font color='{menu.BodyColor}'>{bodyLine}</font>");
                     builder.AppendLine("<br>");
                 }
-
-                if (menu.MenuOptions.Count > 0)
-                {
-                    builder.AppendLine("<br>");
-                }
             }
 
             var keyOffset = 1;
@@ -101,13 +104,18 @@ public sealed class XPXNumberMenuInstance : BaseMenuInstance
                 }
 
                 var color = option.Disabled ? menu.DisabledColor : menu.EnabledColor;
-                builder.Append($"<font color='{color}'>{keyOffset++}.</font> {option.Text}");
+                builder.Append($"<font color='{color}'>{keyOffset++}.</font> {TrimOptionLabel(option.Text, menu.MaxOptionTextLength)}");
                 builder.AppendLine("<br>");
             }
 
             if (HasPrevButton)
             {
                 builder.Append($"<font color='{menu.PrevPageColor}'>7.</font> Prev");
+                builder.AppendLine("<br>");
+            }
+            else if (menu.SlotSevenAction is not null && !string.IsNullOrWhiteSpace(menu.SlotSevenLabel))
+            {
+                builder.Append($"<font color='{menu.PrevPageColor}'>7.</font> {menu.SlotSevenLabel}");
                 builder.AppendLine("<br>");
             }
 
@@ -134,9 +142,30 @@ public sealed class XPXNumberMenuInstance : BaseMenuInstance
         Player.PrintToCenterHtml(" ");
     }
 
+    public void GoToBodyPage(int pageIndex)
+    {
+        if (!IsBodyPagedMenu)
+        {
+            return;
+        }
+
+        CurrentOffset = Math.Max(0, pageIndex * MenuItemsPerPage);
+        Display();
+    }
+
     private void RemoveOnTickListener()
     {
         CounterStrikeSharp.API.Core.Listeners.OnTick handler = Display;
         _plugin.RemoveListener("OnTick", handler);
+    }
+
+    private static string TrimOptionLabel(string text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text) || maxLength <= 0 || text.Length <= maxLength)
+        {
+            return text;
+        }
+
+        return text[..Math.Max(1, maxLength - 3)].TrimEnd() + "...";
     }
 }

